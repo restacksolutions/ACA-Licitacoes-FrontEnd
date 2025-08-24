@@ -1,4 +1,4 @@
-# TailAdmin Angular – Free Angular Tailwind Admin Dashboard Template
+# TailAdmin Angular – Free Angular Tailwind Admin Template
 
 TailAdmin Angular is a **free and open-source admin dashboard template** built with **Angular.js** and **Tailwind CSS**. It provides developers with everything they need to create a feature-rich, data-driven **back-end, dashboard, or admin panel** for any type of web project.
 
