@@ -57,8 +57,6 @@ Clone the repository:
 git clone https://github.com/TailAdmin/free-angular-admin-dashboard.git
 ```
 
-💡 *Windows Users:* If you face issues while cloning, place the repository near the root of your drive.
-
 ---
 
 ### Install Dependencies
@@ -68,8 +66,6 @@ npm install
 # or
 yarn install
 ```
-
-> Use `--legacy-peer-deps` if you face peer dependency conflicts.
 
 ---
 
