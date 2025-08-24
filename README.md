@@ -22,40 +22,15 @@ TailAdmin Angular comes with essential UI components and layouts for building **
 - ⚡ [Get PRO Version](https://tailadmin.com/pricing)
 ---
 
-Feature Comparison
+## Feature Comparison
 
-
-
-Feature
-Free Version
-Pro Version 🌟
-
-
-
-Dashboards
-1 Unique Dashboard 📊
-7 Unique Dashboards: Analytics, Ecommerce, Marketing, SaaS, CRM, Stocks, Logistics and more (more coming soon) 📈
-
-
-Components
-50+ dashboard components 🛠️
-500+ dashboard components and UI elements 🚀
-
-
-UI Elements
-100+ UI elements 🎨
-Included in 500+ components and UI elements 🎨
-
-
-Design Files
-Basic Figma design files 📄
-Complete Figma design system file 📚
-
-
-Support
-Community support 💬
-Email support 📧
-
+| Feature | Free Version | Pro Version 🌟 |
+|---------|--------------|----------------|
+| **Dashboards** | 1 Unique Dashboard 📊 | 7 Unique Dashboards: Analytics, Ecommerce, Marketing, SaaS, CRM, Stocks, Logistics and more (more coming soon) 📈 |
+| **Components** | 50+ dashboard components 🛠️ | 500+ dashboard components and UI elements 🚀 |
+| **UI Elements** | 100+ UI elements 🎨 | Included in 500+ components and UI elements 🎨 |
+| **Design Files** | Basic Figma design files 📄 | Complete Figma design system file 📚 |
+| **Support** | Community support 💬 | Email support 📧 |
 
 ## Installation
 
