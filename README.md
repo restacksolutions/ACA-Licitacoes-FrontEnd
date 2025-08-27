@@ -29,10 +29,10 @@ TailAdmin Angular comes with essential UI components and layouts for building **
 
 | Feature | Free Version | Pro Version 🌟 |
 |---------|--------------|----------------|
-| **Dashboards** | 1 Unique Dashboard 📊 | 7 Unique Dashboards: Analytics, Ecommerce, Marketing, SaaS, CRM, Stocks, Logistics and more (more coming soon) 📈 |
+| **Dashboards** | 1 Unique Dashboard | 7 Unique Dashboards: Analytics, Ecommerce, Marketing, SaaS, CRM, Stocks, Logistics and more (more coming soon) 📈 |
 | **UI Elements and Components** | 100+ UI elements and components | Included in 500+ components and UI elements |
 | **Design Files** | Basic Figma design files | Complete Figma design system file |
-| **Support** | Community support 💬 | Email support 📧 |
+| **Support** | Community support| Email support |
 
 ## Installation
 
