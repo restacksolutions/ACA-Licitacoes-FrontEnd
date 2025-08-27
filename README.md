@@ -80,10 +80,11 @@ Then open:
 
 ---
 
-## Components
+## Angualr.js Tailwind Components
 
 TailAdmin Angular ships with a rich set of **ready-to-use dashboard features**:
 
+* **Ecommerce Dashboard** with essential elements
 * Modern, accessible **sidebar navigation**
 * **Data visualization** with charts and graphs
 * **User profile management** and a **custom 404 page**
@@ -91,3 +92,4 @@ TailAdmin Angular ships with a rich set of **ready-to-use dashboard features**:
 * **Authentication forms** and reusable input components
 * **UI elements**: alerts, dropdowns, modals, buttons, and more
 * Built-in **Dark Mode** 🕶️
+* and many more
