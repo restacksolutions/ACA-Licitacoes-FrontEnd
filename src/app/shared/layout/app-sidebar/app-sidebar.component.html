@@ -114,8 +114,8 @@
                   <span
                     class="ml-auto absolute right-10 menu-dropdown-badge"
                     [ngClass]="{
-                      'menu-dropdown-badge-active': openSubmenu === i,
-                      'menu-dropdown-badge-inactive': openSubmenu !== i
+                      'menu-dropdown-badge-active': openSubmenu === 'main-' + i,
+                      'menu-dropdown-badge-inactive': openSubmenu !== 'main-' + i
                     }"
                   >
                     new
@@ -125,7 +125,7 @@
                   (isMobileOpen$ | async)) {
                   <svg
                     [ngClass]="{
-                      'rotate-180 text-brand-500': openSubmenu === i
+                      'rotate-180 text-brand-500': openSubmenu === 'main-' + i
                     }"
                     width="1em"
                     height="1em"
@@ -320,8 +320,8 @@
                   <span
                     class="ml-auto absolute right-10 menu-dropdown-badge"
                     [ngClass]="{
-                      'menu-dropdown-badge-active': openSubmenu === i,
-                      'menu-dropdown-badge-inactive': openSubmenu !== i
+                      'menu-dropdown-badge-active': openSubmenu === 'others-' + i,
+                      'menu-dropdown-badge-inactive': openSubmenu !== 'others-' + i
                     }"
                   >
                     new
@@ -331,7 +331,7 @@
                   (isMobileOpen$ | async)) {
                   <svg
                     [ngClass]="{
-                      'rotate-180 text-brand-500': openSubmenu === i
+                      'rotate-180 text-brand-500': openSubmenu === 'others-' + i
                     }"
                     width="1em"
                     height="1em"

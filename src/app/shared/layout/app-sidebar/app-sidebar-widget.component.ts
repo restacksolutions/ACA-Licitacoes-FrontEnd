@@ -10,7 +10,7 @@ import { Component } from '@angular/core';
         #1 Tailwind CSS Dashboard
       </h3>
       <p class="mb-4 text-gray-500 text-theme-sm dark:text-gray-400">
-        Leading Tailwind CSS Admin Template with 400+ UI Component and Pages.
+        Leading Tailwind CSS Admin Template with 500+ UI Component and Pages.
       </p>
       <a
         href="https://tailadmin.com/pricing"

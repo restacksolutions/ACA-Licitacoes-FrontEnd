@@ -5,6 +5,7 @@ import { InputFieldComponent } from '../../input/input-field.component';
 import { SelectComponent } from '../../select/select.component';
 import { DatePickerComponent } from '../../date-picker/date-picker.component';
 import { ComponentCardComponent } from '../../../common/component-card/component-card.component';
+import { TimePickerComponent } from '../../time-picker/time-picker.component';
 
 @Component({
   selector: 'app-default-inputs',
@@ -15,6 +16,7 @@ import { ComponentCardComponent } from '../../../common/component-card/component
     InputFieldComponent,
     SelectComponent,
     DatePickerComponent,
+    TimePickerComponent,
   ],
   templateUrl: './default-inputs.component.html',
   styles: ``
@@ -45,5 +47,9 @@ export class DefaultInputsComponent {
   handleTimeChange(event: any) {
     this.timeValue = event.target.value;
     console.log(this.timeValue);
+  }
+
+  onTimeSelected(time: string) {
+    console.log('Picked time:', time); // e.g. "10:45"
   }
 }
