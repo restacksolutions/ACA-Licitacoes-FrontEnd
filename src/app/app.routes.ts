@@ -18,107 +18,160 @@ import { VideosComponent } from './pages/ui-elements/videos/videos.component';
 import { SignInComponent } from './pages/auth-pages/sign-in/sign-in.component';
 import { SignUpComponent } from './pages/auth-pages/sign-up/sign-up.component';
 import { CalenderComponent } from './pages/calender/calender.component';
+import { TendersListComponent } from './pages/tenders/tenders-list/tenders-list.component';
+import { TenderDetailComponent } from './pages/tenders/tender-detail/tender-detail.component';
+import { TenderNewComponent } from './pages/tenders/tender-new/tender-new.component';
+import { VehiclesListComponent } from './pages/vehicles/vehicles-list/vehicles-list.component';
+import { VehicleDetailComponent } from './pages/vehicles/vehicle-detail/vehicle-detail.component';
+import { ReportsComponent } from './pages/reports/reports.component';
+import { SettingsComponent } from './pages/settings/settings.component';
+// import { AuthGuard } from './core/guards/auth.guard'; // Temporarily disabled
 
 export const routes: Routes = [
   {
     path:'',
     component:AppLayoutComponent,
+    // canActivate: [AuthGuard], // Temporarily disabled
     children:[
       {
         path: '',
         component: EcommerceComponent,
         pathMatch: 'full',
-        title:
-          'Angular Ecommerce Dashboard | TailAdmin - Angular Admin Dashboard Template',
+        title: 'Dashboard - Sistema de Licitações',
+      },
+      {
+        path:'dashboard',
+        component: EcommerceComponent,
+        title: 'Dashboard - Sistema de Licitações'
       },
       {
         path:'calendar',
         component:CalenderComponent,
-        title:'Angular Calender | TailAdmin - Angular Admin Dashboard Template'
+        title:'Calendário - Sistema de Licitações'
+      },
+      {
+        path:'tenders',
+        component:TendersListComponent,
+        title:'Licitações - Sistema de Licitações'
+      },
+      {
+        path:'tenders/new',
+        component:TenderNewComponent,
+        title:'Nova Licitação - Sistema de Licitações'
+      },
+      {
+        path:'tenders/:id',
+        component:TenderDetailComponent,
+        title:'Detalhes da Licitação - Sistema de Licitações'
+      },
+      {
+        path:'vehicles',
+        component:VehiclesListComponent,
+        title:'Veículos - Sistema de Licitações'
+      },
+      {
+        path:'vehicles/:id',
+        component:VehicleDetailComponent,
+        title:'Detalhes do Veículo - Sistema de Licitações'
+      },
+      {
+        path:'reports',
+        component:ReportsComponent,
+        title:'Relatórios - Sistema de Licitações'
+      },
+      {
+        path:'settings',
+        component:SettingsComponent,
+        title:'Configurações - Sistema de Licitações'
       },
       {
         path:'profile',
         component:ProfileComponent,
-        title:'Angular Profile Dashboard | TailAdmin - Angular Admin Dashboard Template'
+        title:'Perfil - Sistema de Licitações'
       },
+      // Rotas antigas mantidas para compatibilidade
       {
         path:'form-elements',
         component:FormElementsComponent,
-        title:'Angular Form Elements Dashboard | TailAdmin - Angular Admin Dashboard Template'
+        title:'Form Elements - Sistema de Licitações'
       },
       {
         path:'basic-tables',
         component:BasicTablesComponent,
-        title:'Angular Basic Tables Dashboard | TailAdmin - Angular Admin Dashboard Template'
+        title:'Tabelas - Sistema de Licitações'
       },
       {
         path:'blank',
         component:BlankComponent,
-        title:'Angular Blank Dashboard | TailAdmin - Angular Admin Dashboard Template'
+        title:'Página em Branco - Sistema de Licitações'
       },
-      // support tickets
       {
         path:'invoice',
         component:InvoicesComponent,
-        title:'Angular Invoice Details Dashboard | TailAdmin - Angular Admin Dashboard Template'
+        title:'Faturas - Sistema de Licitações'
       },
       {
         path:'line-chart',
         component:LineChartComponent,
-        title:'Angular Line Chart Dashboard | TailAdmin - Angular Admin Dashboard Template'
+        title:'Gráfico de Linha - Sistema de Licitações'
       },
       {
         path:'bar-chart',
         component:BarChartComponent,
-        title:'Angular Bar Chart Dashboard | TailAdmin - Angular Admin Dashboard Template'
+        title:'Gráfico de Barras - Sistema de Licitações'
       },
       {
         path:'alerts',
         component:AlertsComponent,
-        title:'Angular Alerts Dashboard | TailAdmin - Angular Admin Dashboard Template'
+        title:'Alertas - Sistema de Licitações'
       },
       {
         path:'avatars',
         component:AvatarElementComponent,
-        title:'Angular Avatars Dashboard | TailAdmin - Angular Admin Dashboard Template'
+        title:'Avatares - Sistema de Licitações'
       },
       {
         path:'badge',
         component:BadgesComponent,
-        title:'Angular Badges Dashboard | TailAdmin - Angular Admin Dashboard Template'
+        title:'Badges - Sistema de Licitações'
       },
       {
         path:'buttons',
         component:ButtonsComponent,
-        title:'Angular Buttons Dashboard | TailAdmin - Angular Admin Dashboard Template'
+        title:'Botões - Sistema de Licitações'
       },
       {
         path:'images',
         component:ImagesComponent,
-        title:'Angular Images Dashboard | TailAdmin - Angular Admin Dashboard Template'
+        title:'Imagens - Sistema de Licitações'
       },
       {
         path:'videos',
         component:VideosComponent,
-        title:'Angular Videos Dashboard | TailAdmin - Angular Admin Dashboard Template'
+        title:'Vídeos - Sistema de Licitações'
       },
     ]
   },
   // auth pages
   {
+    path:'login',
+    component:SignInComponent,
+    title:'Login - Sistema de Licitações'
+  },
+  {
     path:'signin',
     component:SignInComponent,
-    title:'Angular Sign In Dashboard | TailAdmin - Angular Admin Dashboard Template'
+    title:'Login - Sistema de Licitações'
   },
   {
     path:'signup',
     component:SignUpComponent,
-    title:'Angular Sign Up Dashboard | TailAdmin - Angular Admin Dashboard Template'
+    title:'Cadastro - Sistema de Licitações'
   },
   // error pages
   {
     path:'**',
     component:NotFoundComponent,
-    title:'Angular NotFound Dashboard | TailAdmin - Angular Admin Dashboard Template'
+    title:'Página não encontrada - Sistema de Licitações'
   },
 ];

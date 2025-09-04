@@ -1,0 +1,139 @@
+/* Estilos para as ações rápidas */
+.action-button {
+  transition: all 0.2s ease-in-out;
+}
+
+.action-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.dark .action-button:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.action-icon {
+  transition: all 0.2s ease-in-out;
+}
+
+.action-button:hover .action-icon {
+  transform: scale(1.1);
+}
+
+/* Color variants for different actions */
+.action-new {
+  border-color: #d1d5db;
+}
+
+.action-new:hover {
+  border-color: #10b981;
+  background-color: #f0fdf4;
+}
+
+.dark .action-new:hover {
+  background-color: #064e3b;
+}
+
+.action-import {
+  border-color: #d1d5db;
+}
+
+.action-import:hover {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+.dark .action-import:hover {
+  background-color: #1e3a8a;
+}
+
+.action-generate {
+  border-color: #d1d5db;
+}
+
+.action-generate:hover {
+  border-color: #8b5cf6;
+  background-color: #faf5ff;
+}
+
+.dark .action-generate:hover {
+  background-color: #581c87;
+}
+
+.action-reports {
+  border-color: #d1d5db;
+}
+
+.action-reports:hover {
+  border-color: #f59e0b;
+  background-color: #fffbeb;
+}
+
+.dark .action-reports:hover {
+  background-color: #78350f;
+}
+
+.action-calendar {
+  border-color: #d1d5db;
+}
+
+.action-calendar:hover {
+  border-color: #6366f1;
+  background-color: #eef2ff;
+}
+
+.dark .action-calendar:hover {
+  background-color: #312e81;
+}
+
+.action-settings {
+  border-color: #d1d5db;
+}
+
+.action-settings:hover {
+  border-color: #6b7280;
+  background-color: #f9fafb;
+}
+
+.dark .action-settings:hover {
+  background-color: #374151;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .action-button {
+    padding: 0.75rem;
+  }
+  
+  .action-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+  
+  .action-icon svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+/* Focus states for accessibility */
+.action-button:focus {
+  outline: none;
+  ring: 2px;
+  ring-color: #10b981;
+  ring-offset: 2px;
+}
+
+.dark .action-button:focus {
+  ring-color: #34d399;
+}
+
+/* Active state */
+.action-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dark .action-button:active {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}

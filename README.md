@@ -1,95 +1,129 @@
-# Free Angular Tailwind Admin Dashboard Template - TailAdmin Angular
+# Sistema de Controle de Licitações
 
-TailAdmin Angular is a **free and open-source admin dashboard template** built with **Angular** and **Tailwind CSS**. It provides developers with everything they need to create a feature-rich, data-driven **back-end, dashboard, or admin panel** for any type of web project.
+Sistema completo para controle e gestão de licitações públicas, desenvolvido com Angular 20 e FastAPI.
 
-![TailAdmin Angular Admin Dashboard](./angular-tailwind.png)
+## 🚀 Tecnologias
 
+### Frontend
+- **Angular 20** - Framework principal
+- **Tailwind CSS** - Estilização
+- **TypeScript** - Linguagem de programação
+- **RxJS** - Programação reativa
 
-With TailAdmin Angular, you’ll get access to a complete set of **dashboard UI components, elements, and ready-to-use pages** to build a modern, high-quality admin panel. Whether it’s for a **complex web application** or a **lightweight project**, TailAdmin Angular is designed to speed up development of any kind of dashboards and admin panels.
+### Dados
+- **Dados Fictícios** - Sistema funciona com dados mockados
+- **LocalStorage** - Persistência local de dados
+- **Observables** - Simulação de chamadas de API
 
-TailAdmin leverages the **powerful ecosystem of Angular 20+**, along with **TypeScript** and the utility-first styling of **Tailwind CSS v4**. Combined, they make TailAdmin Angular a perfect foundation to launch your dashboard or admin panel quickly and effectively.
+## 📋 Funcionalidades
 
-TailAdmin Angular comes with essential UI components and layouts for building **feature-rich, data-driven dashboards** and **admin panels**. TailAdmin Angular is built on:
+### ✅ Implementado
+- [x] Interface de navegação do sistema
+- [x] Dados fictícios de licitações
+- [x] Dados fictícios de veículos
+- [x] Serviços mockados para simulação de API
+- [x] Estrutura de componentes Angular
+- [x] Sistema de roteamento
 
-* **Angular 20+**
-* **TypeScript**
-* **Tailwind CSS v4**
+### 🚧 Em Desenvolvimento
+- [ ] Sistema de autenticação
+- [ ] Upload de editais
+- [ ] CRUD completo de veículos
+- [ ] Sistema de compatibilidade
+- [ ] Geração de documentos
+- [ ] Kanban de prazos
+- [ ] Relatórios
 
-### Quick Links
+## 🛠️ Instalação
 
-- ✨ [Visit Website](https://tailadmin.com/)
-- 🚀 [Angular Demo](https://angular-demo.tailadmin.com/)
-- 📄 [Documentation](https://tailadmin.com/docs)
-- ⬇️ [Download](https://tailadmin.com/download)
-- 🖌️ [Figma Design File (Free Edition)](https://www.figma.com/community/file/1463141366275764364)
-- ⚡ [Get PRO Version](https://tailadmin.com/pricing)
----
+### Pré-requisitos
+- Node.js 18+
+- Angular CLI
 
-## Feature Comparison
-
-| Feature | Free Version | Pro Version 🌟 |
-|---------|--------------|----------------|
-| **Dashboards** | 1 Unique Dashboard | 7 Unique Dashboards: Analytics, Ecommerce, Marketing, SaaS, CRM, Stocks, Logistics and more (more coming soon) 📈 |
-| **UI Elements and Components** | 100+ UI elements and components | Included in 500+ components and UI elements |
-| **Design Files** | Basic Figma design files | Complete Figma design system file |
-| **Support** | Community support| Email support |
-
-## Installation
-
-### Prerequisites
-
-Before you start, make sure you have:
-
-* **Node.js 18.x or later** (Node.js 20.x recommended)
-* **Angular CLI** installed globally:
-
+### Frontend
 ```bash
-npm install -g @angular/cli
-```
-
----
-
-### Cloning the Repository
-
-Clone the repository:
-
-```bash
-git clone https://github.com/TailAdmin/free-angular-admin-dashboard.git
-```
-
----
-
-### Install Dependencies
-
-```bash
+# Instalar dependências
 npm install
-# or
-yarn install
+
+# Executar em modo de desenvolvimento
+ng serve
+
+# Acessar em http://localhost:4200
 ```
 
----
+## 🔧 Configuração
 
-### Start Development Server
+### Dados Fictícios
+O sistema funciona com dados fictícios pré-carregados:
 
+- **Licitações**: 5 licitações de exemplo com diferentes status
+- **Veículos**: 6 veículos de exemplo com especificações completas
+- **Usuários**: 3 usuários de exemplo (Admin, Analista, Técnico)
+
+### Credenciais de Teste
+Para testar o sistema (quando a autenticação for implementada):
+- **Admin**: admin@sistema.com / senha123
+- **Analista**: analista@sistema.com / senha123
+- **Técnico**: tecnico@sistema.com / senha123
+
+## 📁 Estrutura do Projeto
+
+```
+VV-Licitacoes/
+├── src/                    # Frontend Angular
+│   ├── app/
+│   │   ├── core/          # Serviços e guards
+│   │   │   └── services/  # Serviços com dados fictícios
+│   │   ├── pages/         # Páginas da aplicação
+│   │   │   ├── tenders/   # Páginas de licitações
+│   │   │   ├── vehicles/  # Páginas de veículos
+│   │   │   └── reports/   # Páginas de relatórios
+│   │   └── shared/        # Componentes compartilhados
+│   └── environments/      # Configurações de ambiente
+├── backend/               # Backend (removido temporariamente)
+└── README.md
+```
+
+## 🔐 Autenticação
+
+**Status**: Temporariamente desabilitada
+
+O sistema foi projetado para utilizar JWT com três níveis de acesso:
+- **ADMIN**: Acesso total ao sistema
+- **ANALYST**: Análise de licitações e veículos
+- **TECH**: Operações técnicas
+
+## 📊 Dados
+
+### Estrutura dos Dados Fictícios
+- **Licitações**: Título, órgão, UF, modalidade, objeto, status, prazos
+- **Veículos**: Nome, versão, especificações técnicas completas
+- **Usuários**: Email, nome, role, empresa
+
+## 🚀 Deploy
+
+### Desenvolvimento Local
 ```bash
-npm start
+ng serve
 ```
 
-Then open:
-👉 `http://localhost:4200`
+### Produção
+```bash
+ng build --configuration production
+```
 
----
+## 🤝 Contribuição
 
-## Angualr.js Tailwind Components
+1. Fork o projeto
+2. Crie uma branch para sua feature
+3. Commit suas mudanças
+4. Push para a branch
+5. Abra um Pull Request
 
-TailAdmin Angular ships with a rich set of **ready-to-use dashboard features**:
+## 📄 Licença
 
-* **Ecommerce Dashboard** with essential elements
-* Modern, accessible **sidebar navigation**
-* **Data visualization** with charts and graphs
-* **User profile management** and a **custom 404 page**
-* **Tables** and **charts** (line, bar, etc.)
-* **Authentication forms** and reusable input components
-* **UI elements**: alerts, dropdowns, modals, buttons, and more
-* Built-in **Dark Mode** 🕶️
-* and many more
+Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+
+## 📞 Suporte
+
+Para suporte, entre em contato através dos canais oficiais do projeto.

@@ -1,0 +1,80 @@
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Alertas e Retificações</h3>
+    <span *ngIf="alerts.length > 0" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+      {{ alerts.length }}
+    </span>
+  </div>
+
+  <div class="space-y-3">
+    <!-- Loading state -->
+    <div *ngIf="loading" class="space-y-3">
+      <div *ngFor="let i of [1,2,3]" class="flex items-start space-x-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700 animate-pulse">
+        <div class="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-full"></div>
+        <div class="flex-1">
+          <div class="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4 mb-2"></div>
+          <div class="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/2"></div>
+        </div>
+        <div class="w-16 h-6 bg-gray-200 dark:bg-gray-600 rounded"></div>
+      </div>
+    </div>
+
+    <!-- Alerts list -->
+    <div *ngIf="!loading && alerts.length > 0" class="space-y-3">
+      <div
+        *ngFor="let alert of alerts"
+        (click)="onAlertClick(alert)"
+        class="flex items-start space-x-3 p-3 rounded-lg border-l-4 cursor-pointer transition-colors group"
+        [class]="getPriorityColor(alert.priority) + ' hover:bg-gray-50 dark:hover:bg-gray-700'">
+        
+        <!-- Icon -->
+        <div class="flex-shrink-0">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center"
+               [class]="getAlertColor(alert.type)">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="getAlertIcon(alert.type)"></path>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-gray-900 dark:text-gray-100">
+            {{ alert.message }}
+          </p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+            {{ alert.tender_title }}
+          </p>
+          <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            {{ formatDateTime(alert.created_at) }}
+          </p>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center space-x-2">
+          <button
+            (click)="onAlertClick(alert)"
+            class="text-xs text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 font-medium">
+            {{ getActionText(alert.type) }}
+          </button>
+          <button
+            (click)="onDismissAlert(alert.id, $event)"
+            class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            ✕
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div *ngIf="!loading && alerts.length === 0" class="text-center py-8">
+      <svg class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+      </svg>
+      <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">Nenhum alerta</h3>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        Não há alertas ou retificações no momento.
+      </p>
+    </div>
+  </div>
+</div>

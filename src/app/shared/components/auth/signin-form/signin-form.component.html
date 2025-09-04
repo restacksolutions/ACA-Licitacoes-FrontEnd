@@ -13,10 +13,10 @@
     <div>
       <div class="mb-5 sm:mb-8">
         <h1 class="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
-          Sign In
+          Entrar
         </h1>
         <p class="text-sm text-gray-500 dark:text-gray-400">
-          Enter your email and password to sign in!
+          Digite seu email e senha para acessar o sistema!
         </p>
       </div>
 
@@ -76,14 +76,21 @@
         </div>
       </div>
 
+      <!-- Error Message -->
+      @if (errorMessage) {
+        <div class="p-4 mb-4 text-sm text-red-800 bg-red-100 border border-red-200 rounded-lg dark:bg-red-800/10 dark:text-red-400 dark:border-red-800">
+          {{ errorMessage }}
+        </div>
+      }
+
       <!-- Form -->
       <form (ngSubmit)="onSignIn()" class="space-y-6">
         <div>
           <app-label>Email <span class="text-error-500">*</span></app-label>
           <app-input-field
             type="email"
-            placeholder="info@gmail.com"
-            [value]="email"
+            placeholder="seu@email.com"
+            [(ngModel)]="email"
             name="email"
             class="form-input"
             required
@@ -91,12 +98,12 @@
         </div>
 
         <div>
-          <app-label>Password <span class="text-error-500">*</span></app-label>
+          <app-label>Senha <span class="text-error-500">*</span></app-label>
           <div class="relative">
             <app-input-field
               [type]="showPassword ? 'text' : 'password'"
-              placeholder="Enter your password"
-              [value]="password"
+              placeholder="Digite sua senha"
+              [(ngModel)]="password"
               name="password"
               class="form-input"
               required
@@ -133,8 +140,17 @@
           className="w-full"
           size="sm"
           (btnClick)="onSignIn()"
+          [disabled]="isLoading"
         >
-          Sign in
+          @if (isLoading) {
+            <svg class="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Entrando...
+          } @else {
+            Entrar
+          }
         </app-button>
       </form>
 

@@ -1,0 +1,90 @@
+/* Estilos para a tabela de licitações recentes */
+.tender-row {
+  transition: all 0.2s ease-in-out;
+}
+
+.tender-row:hover {
+  transform: translateX(4px);
+}
+
+/* Status badges */
+.status-badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+}
+
+/* Urgency indicators */
+.urgency-badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  animation: pulse 2s infinite;
+}
+
+.urgency-badge.urgent {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.urgency-badge.overdue {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.dark .urgency-badge.urgent {
+  background-color: #7f1d1d;
+  color: #fca5a5;
+}
+
+.dark .urgency-badge.overdue {
+  background-color: #7f1d1d;
+  color: #fca5a5;
+}
+
+/* UF badge */
+.uf-badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.dark .uf-badge {
+  background-color: #374151;
+  color: #d1d5db;
+}
+
+/* Empty state */
+.empty-state {
+  padding: 2rem 0;
+}
+
+.empty-state svg {
+  margin: 0 auto;
+  height: 3rem;
+  width: 3rem;
+  color: #9ca3af;
+}
+
+.dark .empty-state svg {
+  color: #6b7280;
+}
+
+/* Loading skeleton */
+.skeleton-row {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
+}

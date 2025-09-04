@@ -1,0 +1,91 @@
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    
+    <!-- Período -->
+    <div class="flex flex-col sm:flex-row gap-4">
+      <div class="flex flex-col">
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Período</label>
+        <select 
+          [(ngModel)]="selectedPeriod" 
+          (change)="onPeriodChange(selectedPeriod)"
+          class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500">
+          <option *ngFor="let option of periodOptions" [value]="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Status -->
+      <div class="flex flex-col">
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+        <div class="flex flex-wrap gap-2">
+          <button
+            *ngFor="let status of statusOptions"
+            (click)="onStatusToggle(status.value)"
+            [class]="isStatusSelected(status.value) 
+              ? 'px-3 py-1 text-sm bg-green-100 text-green-800 border border-green-300 rounded-full hover:bg-green-200 dark:bg-green-900 dark:text-green-200 dark:border-green-700'
+              : 'px-3 py-1 text-sm bg-gray-100 text-gray-700 border border-gray-300 rounded-full hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600'">
+            {{ status.label }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- UF e Modalidade -->
+    <div class="flex flex-col sm:flex-row gap-4">
+      <div class="flex flex-col">
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">UF</label>
+        <div class="flex flex-wrap gap-2">
+          <button
+            *ngFor="let uf of ufOptions"
+            (click)="onUfToggle(uf.value)"
+            [class]="isUfSelected(uf.value) 
+              ? 'px-3 py-1 text-sm bg-green-100 text-green-800 border border-green-300 rounded-full hover:bg-green-200 dark:bg-green-900 dark:text-green-200 dark:border-green-700'
+              : 'px-3 py-1 text-sm bg-gray-100 text-gray-700 border border-gray-300 rounded-full hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600'">
+            {{ uf.label }}
+          </button>
+        </div>
+      </div>
+
+      <div class="flex flex-col">
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Modalidade</label>
+        <div class="flex flex-wrap gap-2">
+          <button
+            *ngFor="let modalidade of modalidadeOptions"
+            (click)="onModalidadeToggle(modalidade.value)"
+            [class]="isModalidadeSelected(modalidade.value) 
+              ? 'px-3 py-1 text-sm bg-green-100 text-green-800 border border-green-300 rounded-full hover:bg-green-200 dark:bg-green-900 dark:text-green-200 dark:border-green-700'
+              : 'px-3 py-1 text-sm bg-gray-100 text-gray-700 border border-gray-300 rounded-full hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600'">
+            {{ modalidade.label }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Busca e Ações -->
+    <div class="flex flex-col sm:flex-row gap-4">
+      <div class="flex flex-col">
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Busca</label>
+        <input
+          type="text"
+          [(ngModel)]="filters.q"
+          (input)="onSearchChange(filters.q || '')"
+          placeholder="Título, órgão, nº processo..."
+          class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-green-500 w-full sm:w-64">
+      </div>
+
+      <div class="flex items-end gap-2">
+        <button
+          (click)="onApplyFilters()"
+          class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors">
+          Aplicar
+        </button>
+        <button
+          (click)="onClearFilters()"
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
+          Limpar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

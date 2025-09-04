@@ -1,0 +1,6 @@
+/* Estilos para o gráfico de órgãos */
+canvas {
+  max-height: 100%;
+  width: 100% !important;
+  height: 100% !important;
+}

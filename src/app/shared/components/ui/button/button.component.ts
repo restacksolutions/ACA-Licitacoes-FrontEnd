@@ -4,6 +4,7 @@ import { SafeHtmlPipe } from '../../../pipe/safe-html.pipe';
 
 @Component({
   selector: 'app-button',
+  standalone: true,
   imports: [
     CommonModule,
     SafeHtmlPipe,

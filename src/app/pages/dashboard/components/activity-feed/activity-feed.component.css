@@ -1,0 +1,146 @@
+/* Estilos para o feed de atividade */
+.activity-item {
+  transition: all 0.2s ease-in-out;
+}
+
+.activity-item:hover {
+  transform: translateX(4px);
+}
+
+/* Activity icons */
+.activity-icon {
+  transition: transform 0.2s ease-in-out;
+}
+
+.activity-item:hover .activity-icon {
+  transform: scale(1.1);
+}
+
+/* Activity type labels */
+.activity-type {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.dark .activity-type {
+  color: #9ca3af;
+}
+
+/* Time indicators */
+.time-indicator {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.dark .time-indicator {
+  color: #6b7280;
+}
+
+/* Arrow indicator */
+.arrow-indicator {
+  transition: all 0.2s ease-in-out;
+}
+
+.activity-item:hover .arrow-indicator {
+  transform: translateX(2px);
+}
+
+/* Activity count badge */
+.activity-count {
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 53%, 80%, 100% {
+    transform: translate3d(0,0,0);
+  }
+  40%, 43% {
+    transform: translate3d(0, -8px, 0);
+  }
+  70% {
+    transform: translate3d(0, -4px, 0);
+  }
+  90% {
+    transform: translate3d(0, -2px, 0);
+  }
+}
+
+/* Empty state */
+.empty-activity {
+  padding: 2rem 0;
+}
+
+.empty-activity svg {
+  margin: 0 auto;
+  height: 3rem;
+  width: 3rem;
+  color: #9ca3af;
+}
+
+.dark .empty-activity svg {
+  color: #6b7280;
+}
+
+/* Loading skeleton */
+.skeleton-activity {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
+}
+
+/* Activity content */
+.activity-content {
+  line-height: 1.4;
+}
+
+.activity-message {
+  color: #111827;
+  font-weight: 400;
+}
+
+.dark .activity-message {
+  color: #f9fafb;
+}
+
+.activity-tender {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.dark .activity-tender {
+  color: #9ca3af;
+}
+
+.activity-user {
+  color: #9ca3af;
+  font-size: 0.75rem;
+}
+
+.dark .activity-user {
+  color: #6b7280;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .activity-item {
+    padding: 0.75rem;
+  }
+  
+  .activity-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+  
+  .activity-icon svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+}

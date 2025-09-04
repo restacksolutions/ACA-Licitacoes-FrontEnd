@@ -1,0 +1,116 @@
+/* Estilos para os gráficos */
+.funnel-stage {
+  transition: all 0.3s ease-in-out;
+}
+
+.funnel-stage:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.dark .funnel-stage:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Trend bars */
+.trend-bar {
+  transition: all 0.3s ease-in-out;
+}
+
+.trend-bar:hover {
+  transform: scaleY(1.1);
+  transform-origin: bottom;
+}
+
+/* Value tooltip */
+.value-tooltip {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Chart legends */
+.chart-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.legend-color {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+}
+
+/* Loading animations */
+.skeleton-chart {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
+}
+
+/* Empty state */
+.empty-chart {
+  padding: 2rem 0;
+}
+
+.empty-chart svg {
+  margin: 0 auto;
+  height: 3rem;
+  width: 3rem;
+  color: #9ca3af;
+}
+
+.dark .empty-chart svg {
+  color: #6b7280;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .chart-legend {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .legend-item {
+    font-size: 0.75rem;
+  }
+}
+
+/* Chart hover effects */
+.chart-container {
+  position: relative;
+}
+
+.chart-container:hover .chart-overlay {
+  opacity: 1;
+}
+
+.chart-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.05);
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  border-radius: 0.5rem;
+  pointer-events: none;
+}
+
+.dark .chart-overlay {
+  background: rgba(255, 255, 255, 0.05);
+}
