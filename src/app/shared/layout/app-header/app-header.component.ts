@@ -1,9 +1,10 @@
 import { Component, ElementRef, ViewChild } from '@angular/core';
 import { SidebarService } from '../../services/sidebar.service';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { ThemeToggleButtonComponent } from '../../components/common/theme-toggle/theme-toggle-button.component';
 import { NotificationDropdownComponent } from '../../components/header/notification-dropdown/notification-dropdown.component';
+import { AuthService } from '../../../core/services/auth.service';
 // import { UserDropdownComponent } from '../../components/header/user-dropdown/user-dropdown.component'; // Temporarily disabled
 
 @Component({
@@ -24,7 +25,11 @@ export class AppHeaderComponent {
 
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
 
-  constructor(public sidebarService: SidebarService) {
+  constructor(
+    public sidebarService: SidebarService,
+    private authService: AuthService,
+    private router: Router
+  ) {
     this.isMobileOpen$ = this.sidebarService.isMobileOpen$;
   }
 
@@ -54,4 +59,13 @@ export class AppHeaderComponent {
       this.searchInput?.nativeElement.focus();
     }
   };
+
+  onLogout() {
+    this.authService.logout();
+    this.router.navigate(['/login']);
+  }
+
+  get isLoggedIn(): boolean {
+    return this.authService.isLoggedIn();
+  }
 }

@@ -15,34 +15,35 @@
   (mouseenter)="onSidebarMouseEnter()"
   (mouseleave)="sidebarService.setHovered(false)"
 >
-  <div
-    class="py-8 flex"
-    [ngClass]="{
-      'xl:justify-center': !((isExpanded$ | async) || (isHovered$ | async)),
-      'justify-start': (isExpanded$ | async) || (isHovered$ | async)
-    }"
-  >
-    <a routerLink="/">
-      @if ((isExpanded$ | async) || (isHovered$ | async) || (isMobileOpen$ | async)) {
-      <img
-        class="dark:hidden"
-        src="/images/logo/logo.svg"
-        alt="Logo"
-        width="150"
-        height="40"
-      />
-      <img
-        class="hidden dark:block"
-        src="/images/logo/logo-dark.svg"
-        alt="Logo"
-        width="150"
-        height="40"
-      />
-      } @else {
-      <img src="/images/logo/logo-icon.svg" alt="Logo" width="32" height="32" />
-      }
-    </a>
-  </div>
+<div
+  class="py-8 flex"
+  [ngClass]="{
+    'xl:justify-center': !((isExpanded$ | async) || (isHovered$ | async)),
+    'justify-start': (isExpanded$ | async) || (isHovered$ | async)
+  }"
+>
+  <a routerLink="/" class="inline-flex items-center h-10 select-none">
+    @if ((isExpanded$ | async) || (isHovered$ | async) || (isMobileOpen$ | async)) {
+      <span class="flex items-baseline gap-1 whitespace-nowrap">
+        <span
+          class="text-xl md:text-2xl font-extrabold leading-none bg-gradient-to-r from-emerald-600 to-sky-500 bg-clip-text text-transparent tracking-wide"
+        >
+          ACA
+        </span>
+        <span class="text-lg md:text-xl leading-none text-neutral-700 dark:text-neutral-300">
+          Licitacoes
+        </span>
+      </span>
+    } @else {
+      <span
+        class="text-xl md:text-2xl font-extrabold leading-none bg-gradient-to-r from-emerald-600 to-sky-500 bg-clip-text text-transparent tracking-wide whitespace-nowrap"
+      >
+        ACA
+      </span>
+    }
+  </a>
+</div>
+
 
   <div class="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
     <nav class="mb-6">
@@ -262,7 +263,7 @@
                 (isHovered$ | async) ||
                 (isMobileOpen$ | async)
             ) {
-              Others
+            
             } @else {
               <svg
                 width="1em"
@@ -451,7 +452,7 @@
       </div>
     </nav>
     @if ((isExpanded$ | async) || (isHovered$ | async) || (isMobileOpen$ | async)) {
-    <app-sidebar-widget />
+
     }
   </div>
 </aside>

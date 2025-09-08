@@ -64,24 +64,22 @@ export class AuthService {
     }
   }
 
-  login(credentials: LoginRequest): Observable<LoginResponse> {
+  login(email: string, password: string): Observable<boolean> {
     // Simular delay da API
-    return new Observable<LoginResponse>(observer => {
+    return new Observable<boolean>(observer => {
       setTimeout(() => {
-        const user = this.mockUsers.find(u => u.email === credentials.email);
-        if (user && credentials.password === 'senha123') {
+        const user = this.mockUsers.find(u => u.email === email);
+        if (user && password === 'admin123') {
           const token = this.generateMockToken(user);
           localStorage.setItem('access_token', token);
           localStorage.setItem('current_user', JSON.stringify(user));
           this.currentUserSubject.next(user);
           
-          observer.next({
-            access_token: token,
-            token_type: 'Bearer'
-          });
+          observer.next(true);
           observer.complete();
         } else {
-          observer.error(new Error('Credenciais inválidas'));
+          observer.next(false);
+          observer.complete();
         }
       }, 1000);
     });
