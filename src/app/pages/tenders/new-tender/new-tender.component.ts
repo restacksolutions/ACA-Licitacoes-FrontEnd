@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
-import { TenderApiService, TenderFormData, TenderUploadResponse, UploadProgress } from '../../../core/services/tender-api.service';
+import { TenderApiService, TenderFormData, TenderUploadResponse, UploadProgress } from '../tender-api.service';
 
 @Component({
   selector: 'app-new-tender',

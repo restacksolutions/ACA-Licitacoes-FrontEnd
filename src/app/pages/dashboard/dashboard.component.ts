@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
-import { DashboardService, DashboardData, DashboardKPIs, AgendaEvent, RecentTender } from '../../core/services/dashboard.service';
+import { DashboardService, DashboardData, DashboardKPIs, AgendaEvent, RecentTender } from '../dashboard/dashboard.service';
 
 @Component({
   selector: 'app-dashboard',

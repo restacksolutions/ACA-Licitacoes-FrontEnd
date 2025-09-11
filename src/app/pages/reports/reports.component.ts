@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
-import { ReportsService, ReportsData, ReportsFilters, ReportsKPIs, WinRateData, StatusByMonth, LossReason, ReportsTableItem } from '../../core/services/reports.service';
+import { ReportsService, ReportsData, ReportsFilters, ReportsKPIs, WinRateData, StatusByMonth, LossReason, ReportsTableItem } from './reports.service';
 
 @Component({
   selector: 'app-reports',

@@ -1,9 +1,10 @@
+// src/app/app.routes.ts
 import { Routes } from '@angular/router';
-import { EcommerceComponent } from './pages/dashboard/ecommerce/ecommerce.component';
-import { ProfileComponent } from './pages/profile/profile.component';
+
 import { AppLayoutComponent } from './shared/layout/app-layout/app-layout.component';
-import { SignInComponent } from './pages/auth-pages/sign-in/sign-in.component';
-import { SignUpComponent } from './pages/auth-pages/sign-up/sign-up.component';
+
+// Páginas logadas
+import { EcommerceComponent } from './pages/dashboard/ecommerce/ecommerce.component';
 import { CalenderComponent } from './pages/calender/calender.component';
 import { TendersListComponent } from './pages/tenders/tenders-list/tenders-list.component';
 import { TenderDetailComponent } from './pages/tenders/tender-detail/tender-detail.component';
@@ -13,14 +14,20 @@ import { VehiclesListComponent } from './pages/vehicles/vehicles-list/vehicles-l
 import { VehicleDetailComponent } from './pages/vehicles/vehicle-detail/vehicle-detail.component';
 import { ReportsComponent } from './pages/reports/reports.component';
 import { SettingsComponent } from './pages/settings/settings.component';
-// import { AuthGuard } from './core/guards/auth.guard'; // Temporarily disabled
+import { ProfileComponent } from './pages/profile/profile.component';
+
+// Auth pages (públicas)
+import { SignInComponent } from './pages/auth-pages/sign-in/sign-in.component';
+import { SignUpComponent } from './pages/auth-pages/sign-up/sign-up.component';
 
 export const routes: Routes = [
+  // Área autenticada — tudo dentro deste layout é protegido
   {
-    path:'',
-    component:AppLayoutComponent,
-    // canActivate: [AuthGuard], // Temporarily disabled
-    children:[
+    path: '',
+    component: AppLayoutComponent,
+    canActivate: [() => import('./core/guards/auth.guard').then(m => m.AuthGuard)],
+    canActivateChild: [() => import('./core/guards/auth.guard').then(m => m.AuthGuard)],
+    children: [
       {
         path: '',
         component: EcommerceComponent,
@@ -28,81 +35,68 @@ export const routes: Routes = [
         title: 'Dashboard - Sistema de Licitações',
       },
       {
-        path:'dashboard',
+        path: 'dashboard',
         component: EcommerceComponent,
-        title: 'Dashboard - Sistema de Licitações'
+        title: 'Dashboard - Sistema de Licitações',
       },
       {
-        path:'calendar',
-        component:CalenderComponent,
-        title:'Calendário - Sistema de Licitações'
+        path: 'calendar',
+        component: CalenderComponent,
+        title: 'Calendário - Sistema de Licitações',
       },
       {
-        path:'tenders',
-        component:TendersListComponent,
-        title:'Licitações - Sistema de Licitações'
+        path: 'tenders',
+        component: TendersListComponent,
+        title: 'Licitações - Sistema de Licitações',
       },
       {
-        path:'tenders/new',
-        component:NewTenderComponent,
-        title:'Nova Licitação - Sistema de Licitações'
+        path: 'tenders/new',
+        component: NewTenderComponent,
+        title: 'Nova Licitação - Sistema de Licitações',
       },
       {
-        path:'tenders/:id',
-        component:TenderDetailComponent,
-        title:'Detalhes da Licitação - Sistema de Licitações'
+        path: 'tenders/:id',
+        component: TenderDetailComponent,
+        title: 'Detalhes da Licitação - Sistema de Licitações',
       },
       {
-        path:'tenders/:id/success',
-        component:TenderSuccessComponent,
-        title:'Licitação Processada - Sistema de Licitações'
+        path: 'tenders/:id/success',
+        component: TenderSuccessComponent,
+        title: 'Licitação Processada - Sistema de Licitações',
       },
       {
-        path:'vehicles',
-        component:VehiclesListComponent,
-        title:'Veículos - Sistema de Licitações'
+        path: 'vehicles',
+        component: VehiclesListComponent,
+        title: 'Veículos - Sistema de Licitações',
       },
       {
-        path:'vehicles/:id',
-        component:VehicleDetailComponent,
-        title:'Detalhes do Veículo - Sistema de Licitações'
+        path: 'vehicles/:id',
+        component: VehicleDetailComponent,
+        title: 'Detalhes do Veículo - Sistema de Licitações',
       },
       {
-        path:'reports',
-        component:ReportsComponent,
-        title:'Relatórios - Sistema de Licitações'
+        path: 'reports',
+        component: ReportsComponent,
+        title: 'Relatórios - Sistema de Licitações',
       },
       {
-        path:'settings',
-        component:SettingsComponent,
-        title:'Configurações - Sistema de Licitações'
+        path: 'settings',
+        component: SettingsComponent,
+        title: 'Configurações - Sistema de Licitações',
       },
       {
-        path:'profile',
-        component:ProfileComponent,
-        title:'Perfil - Sistema de Licitações'
-      }
-    ]
+        path: 'profile',
+        component: ProfileComponent,
+        title: 'Perfil - Sistema de Licitações',
+      },
+    ],
   },
-  // auth pages
-  {
-    path:'login',
-    component:SignInComponent,
-    title:'Login - Sistema de Licitações'
-  },
-  {
-    path:'signin',
-    component:SignInComponent,
-    title:'Login - Sistema de Licitações'
-  },
-  {
-    path:'signup',
-    component:SignUpComponent,
-    title:'Cadastro - Sistema de Licitações'
-  },
-  // error pages
-  {
-    path:'**',
-    redirectTo: '/dashboard'
-  },
+
+  // Auth (públicas)
+  { path: 'login',  component: SignInComponent, title: 'Login - Sistema de Licitações' },
+  { path: 'signin', component: SignInComponent, title: 'Login - Sistema de Licitações' },
+  { path: 'signup', component: SignUpComponent, title: 'Cadastro - Sistema de Licitações' },
+
+  // Fallback
+  { path: '**', redirectTo: 'login' },
 ];

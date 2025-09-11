@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { TenderService, Tender, AuthService } from '../../../core/services';
+import { TenderService, Tender } from '../tender.service';
+import { AuthService } from '../../auth-pages/auth.service';
 
 @Component({
   selector: 'app-tenders-list',

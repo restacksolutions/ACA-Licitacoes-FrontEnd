@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AuthService } from '../../../core/services/auth.service';
+import { AuthService } from '../auth.service'; // <== caminho atualizado
 
 @Component({
   selector: 'app-sign-in',
@@ -23,7 +23,7 @@ export class SignInComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    // Check if user is already logged in
+    // Se já existe sessão válida, vai direto pro dashboard
     if (this.authService.isLoggedIn()) {
       this.router.navigate(['/dashboard']);
     }
@@ -38,17 +38,19 @@ export class SignInComponent implements OnInit {
     this.loading = true;
     this.error = '';
 
-    // Simulate login process
     this.authService.login(this.email, this.password).subscribe({
       next: (success) => {
         if (success) {
           this.router.navigate(['/dashboard']);
         } else {
+          // Quando credenciais estão erradas ou o Supabase retornou erro genérico
           this.error = 'Email ou senha incorretos';
         }
         this.loading = false;
       },
       error: (err) => {
+        // Em geral, o AuthService já converte erro em "false", então esse bloco raramente dispara.
+        // Mantemos por segurança.
         this.error = 'Erro ao fazer login. Tente novamente.';
         this.loading = false;
         console.error('Login error:', err);

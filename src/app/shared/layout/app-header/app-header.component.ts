@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { ThemeToggleButtonComponent } from '../../components/common/theme-toggle/theme-toggle-button.component';
 import { NotificationDropdownComponent } from '../../components/header/notification-dropdown/notification-dropdown.component';
-import { AuthService } from '../../../core/services/auth.service';
+import { AuthService } from '../../../pages/auth-pages/auth.service';
 // import { UserDropdownComponent } from '../../components/header/user-dropdown/user-dropdown.component'; // Temporarily disabled
 
 @Component({

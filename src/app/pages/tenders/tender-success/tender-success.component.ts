@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { TenderApiService, TenderUploadResponse } from '../../../core/services/tender-api.service';
+import { TenderApiService, TenderUploadResponse } from '../tender-api.service';
 
 @Component({
   selector: 'app-tender-success',
