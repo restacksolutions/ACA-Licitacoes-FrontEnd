@@ -61,8 +61,8 @@ export class AppHeaderComponent {
   };
 
   onLogout() {
+    console.log('[AppHeader] Botão de logout clicado');
     this.authService.logout();
-    this.router.navigate(['/login']);
   }
 
   get isLoggedIn(): boolean {

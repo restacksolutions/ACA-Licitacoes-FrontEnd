@@ -29,7 +29,15 @@ export class AuthService {
       const session = data.session;
       if (session) {
         localStorage.setItem('access_token', session.access_token);
-        await this.loadUserProfile(); // carrega app_user + empresa + papel
+        try {
+          await this.loadUserProfile(); // carrega app_user + empresa + papel
+        } catch (e) {
+          console.warn('[AuthService] loadUserProfile falhou na inicialização:', e);
+          this.clearAuthData();
+        }
+      } else {
+        // Se não há sessão, limpa tudo
+        this.clearAuthData();
       }
     });
 
@@ -37,22 +45,36 @@ export class AuthService {
     supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('[AuthState]', event, { hasSession: !!session });
       if (event === 'SIGNED_OUT' || !session) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('current_user');
-        this.currentUserSubject.next(null);
+        this.clearAuthData();
       } else if (event === 'SIGNED_IN') {
         localStorage.setItem('access_token', session.access_token);
         try {
           await this.loadUserProfile();
         } catch (e) {
           console.warn('[AuthState] loadUserProfile falhou:', e);
+          this.clearAuthData();
         }
       }
     });
 
-    // Recupera do localStorage
+    // Recupera do localStorage apenas se há token válido
+    const token = localStorage.getItem('access_token');
     const saved = localStorage.getItem('current_user');
-    if (saved) this.currentUserSubject.next(JSON.parse(saved));
+    if (token && saved) {
+      try {
+        const user = JSON.parse(saved);
+        if (user && user.id && user.email) {
+          this.currentUserSubject.next(user);
+        } else {
+          this.clearAuthData();
+        }
+      } catch (e) {
+        console.warn('[AuthService] Erro ao recuperar usuário do localStorage:', e);
+        this.clearAuthData();
+      }
+    } else {
+      this.clearAuthData();
+    }
   }
 
   /** LOGIN via Supabase Auth */
@@ -95,12 +117,12 @@ export class AuthService {
     );
   }
 
-  /**
-   * SIGN UP:
-   * - envia metadata da empresa no signup (trigger no DB cria app_users/companies/membership)
-   * - se vier sessão: salva token, tenta carregar perfil (opcional) e **REDIRECIONA PARA /login**
-   * - se NÃO vier sessão (projetos com confirmação de e-mail): **REDIRECIONA PARA /login** com mensagem amigável
-   */
+   /**
+    * SIGN UP:
+    * - envia metadata da empresa no signup (trigger no DB cria app_users/companies/membership)
+    * - se vier sessão: salva token, carrega perfil e **REDIRECIONA PARA /dashboard**
+    * - se NÃO vier sessão (projetos com confirmação de e-mail): **REDIRECIONA PARA /login** com mensagem amigável
+    */
   async signUpAndOnboard(payload: {
     fullName: string; email: string; password: string;
     companyName: string; cnpj?: string; phone?: string; address?: string;
@@ -133,35 +155,62 @@ export class AuthService {
       return true;
     }
 
-    // 3) Fluxo B: sessão veio (confirmação desativada) → salva token, tenta perfil
-    localStorage.setItem('access_token', signUpData.session.access_token);
+     // 3) Fluxo B: sessão veio (confirmação desativada) → salva token, carrega perfil e vai para dashboard
+     localStorage.setItem('access_token', signUpData.session.access_token);
+     console.log('[AuthService.signUpAndOnboard] Token salvo, carregando perfil...');
 
-    try {
-      await this.loadUserProfile();
-      console.log('[AuthService.signUpAndOnboard] perfil carregado após signup');
-    } catch (profileError) {
-      console.warn('[AuthService.signUpAndOnboard] loadUserProfile falhou (ok):', profileError);
-    }
+     try {
+       await this.loadUserProfile();
+       console.log('[AuthService.signUpAndOnboard] perfil carregado com sucesso');
+     } catch (profileError) {
+       console.warn('[AuthService.signUpAndOnboard] loadUserProfile falhou, criando usuário básico:', profileError);
+       // Cria usuário básico como fallback
+       const basicUser: User = {
+         id: signUpData.user?.id || payload.email,
+         email: signUpData.user?.email || payload.email,
+         name: payload.fullName,
+         role: 'ADMIN',
+         company_id: '',
+         created_at: new Date().toISOString(),
+       };
+       localStorage.setItem('current_user', JSON.stringify(basicUser));
+       this.currentUserSubject.next(basicUser);
+     }
 
-    // 4) Independente do perfil, **sai da sessão** e vai para /login
-    try {
-      console.log('[AuthService.signUpAndOnboard] signOut pós-cadastro → ir para /login');
-      await supabase.auth.signOut();
-    } catch (e) {
-      console.warn('[AuthService.signUpAndOnboard] signOut falhou (seguindo):', e);
-      // limpamos nós mesmos
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('current_user');
-      this.currentUserSubject.next(null);
-    }
-
-    await this.navigateToLoginSafe();
-    return true;
+     // 4) Redireciona para dashboard (usuário já está logado)
+     console.log('[AuthService.signUpAndOnboard] Redirecionando para dashboard...');
+     console.log('[AuthService.signUpAndOnboard] Usuário atual:', this.currentUserSubject.value);
+     console.log('[AuthService.signUpAndOnboard] Token no localStorage:', !!localStorage.getItem('access_token'));
+     
+     // Navega diretamente para o dashboard
+     await this.navigateToDashboardSafe();
+     
+     return true;
   }
 
   logout(): void {
+    console.log('[AuthService] Iniciando logout...');
+    
+    // 1) Limpa o estado do usuário
+    this.currentUserSubject.next(null);
+    
+    // 2) Limpa o localStorage completamente
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('current_user');
+    localStorage.removeItem('pending_onboarding');
+    
+    // 3) Faz logout do Supabase
     supabase.auth.signOut();
-    this.router.navigate(['/login']);
+    
+    // 4) Redireciona para login
+    console.log('[AuthService] Redirecionando para /login...');
+    this.router.navigate(['/login']).then(() => {
+      console.log('[AuthService] Logout concluído');
+    }).catch((error) => {
+      console.error('[AuthService] Erro ao redirecionar:', error);
+      // Fallback: redirecionamento forçado
+      window.location.href = '/login';
+    });
   }
 
   getToken(): string | null {
@@ -169,7 +218,20 @@ export class AuthService {
   }
 
   isLoggedIn(): boolean {
-    return !!this.getToken() && !!this.currentUserSubject.value;
+    const hasToken = !!this.getToken();
+    const hasUser = !!this.currentUserSubject.value;
+    const hasValidUser = !!(this.currentUserSubject.value && 
+                           this.currentUserSubject.value.id && 
+                           this.currentUserSubject.value.email);
+    
+    console.log('[AuthService.isLoggedIn] Verificação:', {
+      hasToken,
+      hasUser,
+      hasValidUser,
+      user: this.currentUserSubject.value
+    });
+    
+    return hasToken && hasUser && hasValidUser;
   }
 
   getCurrentUser(): User | null {
@@ -231,20 +293,57 @@ export class AuthService {
     return 'TECH';
   }
 
-  private async navigateToLoginSafe() {
-    try {
-      const ok = await this.router.navigate(['/login'], { replaceUrl: true });
-      console.log('[AuthService] navigate /login →', ok);
-      if (ok) return;
-      const ok2 = await this.router.navigateByUrl('/login', { replaceUrl: true });
-      console.log('[AuthService] navigateByUrl /login →', ok2);
-      if (ok2) return;
-      console.warn('[AuthService] SPA navigation falhou — hard redirect /login');
-      window.location.assign('/login');
-    } catch (err) {
-      console.error('[AuthService] erro ao navegar para /login:', err);
-      window.location.assign('/login');
-    }
+   private async navigateToLoginSafe() {
+     try {
+       const ok = await this.router.navigate(['/login'], { replaceUrl: true });
+       console.log('[AuthService] navigate /login →', ok);
+       if (ok) return;
+       const ok2 = await this.router.navigateByUrl('/login', { replaceUrl: true });
+       console.log('[AuthService] navigateByUrl /login →', ok2);
+       if (ok2) return;
+       console.warn('[AuthService] SPA navigation falhou — hard redirect /login');
+       window.location.assign('/login');
+     } catch (err) {
+       console.error('[AuthService] erro ao navegar para /login:', err);
+       window.location.assign('/login');
+     }
+   }
+
+   private async navigateToDashboardSafe() {
+     try {
+       console.log('[AuthService] Tentando navegar para /dashboard...');
+       console.log('[AuthService] Router disponível:', !!this.router);
+       console.log('[AuthService] URL atual:', this.router.url);
+       
+       const ok = await this.router.navigate(['/dashboard'], { replaceUrl: true });
+       console.log('[AuthService] navigate /dashboard →', ok);
+       if (ok) {
+         console.log('[AuthService] Navegação bem-sucedida via navigate()');
+         return;
+       }
+       
+       console.log('[AuthService] Tentando navigateByUrl...');
+       const ok2 = await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
+       console.log('[AuthService] navigateByUrl /dashboard →', ok2);
+       if (ok2) {
+         console.log('[AuthService] Navegação bem-sucedida via navigateByUrl()');
+         return;
+       }
+       
+       console.warn('[AuthService] SPA navigation falhou — hard redirect /dashboard');
+       window.location.assign('/dashboard');
+     } catch (err) {
+       console.error('[AuthService] erro ao navegar para /dashboard:', err);
+       window.location.assign('/dashboard');
+     }
+   }
+
+  private clearAuthData(): void {
+    console.log('[AuthService] Limpando dados de autenticação...');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('current_user');
+    localStorage.removeItem('pending_onboarding');
+    this.currentUserSubject.next(null);
   }
 
   private mapAuthError(error: any): string {

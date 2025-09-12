@@ -42,29 +42,44 @@ export class SignUpComponent implements OnInit {
     console.log('[SignUpComponent] submit');
     if (!this.name || !this.email || !this.password || !this.confirmPassword || !this.companyName) {
       this.error = 'Por favor, preencha todos os campos obrigatórios';
-      await Swal.fire({ icon: 'warning', title: 'Campos obrigatórios', text: this.error });
+      await Swal.fire({ 
+        icon: 'warning', 
+        title: 'Campos obrigatórios', 
+        text: this.error,
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false
+      });
       return;
     }
     if (this.password !== this.confirmPassword) {
       this.error = 'As senhas não coincidem';
-      await Swal.fire({ icon: 'error', title: 'Senha', text: this.error });
+      await Swal.fire({ 
+        icon: 'error', 
+        title: 'Senha', 
+        text: this.error,
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false
+      });
       return;
     }
     if (this.password.length < 6) {
       this.error = 'A senha deve ter pelo menos 6 caracteres';
-      await Swal.fire({ icon: 'error', title: 'Senha fraca', text: this.error });
+      await Swal.fire({ 
+        icon: 'error', 
+        title: 'Senha fraca', 
+        text: this.error,
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false
+      });
       return;
     }
 
     this.loading = true;
     this.error = '';
     this.info = '';
-
-    // Fallback: se algo travar no fluxo, força /login após 3s
-    const navFallback = setTimeout(() => {
-      console.warn('[SignUpComponent] fallback: forçando /login após 3s');
-      this.forceLoginNav();
-    }, 3000);
 
     try {
       console.log('[SignUpComponent] Starting signUpAndOnboard...');
@@ -79,50 +94,75 @@ export class SignUpComponent implements OnInit {
       });
       console.log('[SignUpComponent] signUpAndOnboard result:', ok);
 
-      const msg = this.authService.getLastError?.() || 'Conta criada com sucesso! Faça login para continuar.';
-      this.info = msg;
-
+      // Se chegou aqui, o AuthService já redirecionou para o dashboard
+      // Apenas mostra mensagem de sucesso
       await Swal.fire({
         icon: 'success',
         title: 'Conta criada',
-        text: msg,
-        timer: 1600,
-        showConfirmButton: false
+        text: 'Redirecionando para o dashboard...',
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        allowOutsideClick: false
       });
 
-      // Redireciona para /login (o service também tenta, mas garantimos aqui)
-      await this.forceLoginNav();
     } catch (e: any) {
       console.error('[SignUpComponent] signUpAndOnboard failed:', e);
       this.error = e?.message || 'Erro ao criar conta. Tente novamente.';
-      await Swal.fire({ icon: 'error', title: 'Falha no cadastro', text: this.error });
+      await Swal.fire({ 
+        icon: 'error', 
+        title: 'Falha no cadastro', 
+        text: this.error,
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false
+      });
     } finally {
-      clearTimeout(navFallback);
       this.loading = false;
     }
   }
 
   onSignIn() {
-    this.router.navigate(['/login']);
+    this.router.navigate(['/dashboard']);
   }
 
-  /** Navegação robusta para /login */
-  private async forceLoginNav() {
-    try {
-      console.log('[SignUpComponent] navigating → /login …');
-      const ok = await this.router.navigate(['/login'], { replaceUrl: true });
-      console.log('[SignUpComponent] navigate /login →', ok);
-      if (ok) return;
+   /** Navegação robusta para /dashboard */
+   private async forceDashboardNav() {
+     try {
+       console.log('[SignUpComponent] navigating → /dashboard …');
+       const ok = await this.router.navigate(['/dashboard'], { replaceUrl: true });
+       console.log('[SignUpComponent] navigate /dashboard →', ok);
+       if (ok) return;
 
-      const ok2 = await this.router.navigateByUrl('/login', { replaceUrl: true });
-      console.log('[SignUpComponent] navigateByUrl /login →', ok2);
-      if (ok2) return;
+       const ok2 = await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
+       console.log('[SignUpComponent] navigateByUrl /dashboard →', ok2);
+       if (ok2) return;
 
-      console.warn('[SignUpComponent] SPA navigation falhou — hard redirect /login');
-      window.location.assign('/login');
-    } catch (err) {
-      console.error('[SignUpComponent] erro ao navegar para /login:', err);
-      window.location.assign('/login');
-    }
-  }
+       console.warn('[SignUpComponent] SPA navigation falhou — hard redirect /dashboard');
+       window.location.assign('/dashboard');
+     } catch (err) {
+       console.error('[SignUpComponent] erro ao navegar para /dashboard:', err);
+       window.location.assign('/dashboard');
+     }
+   }
+
+   /** Navegação robusta para /login */
+   private async forceLoginNav() {
+     try {
+       console.log('[SignUpComponent] navigating → /login …');
+       const ok = await this.router.navigate(['/login'], { replaceUrl: true });
+       console.log('[SignUpComponent] navigate /login →', ok);
+       if (ok) return;
+
+       const ok2 = await this.router.navigateByUrl('/login', { replaceUrl: true });
+       console.log('[SignUpComponent] navigateByUrl /login →', ok2);
+       if (ok2) return;
+
+       console.warn('[SignUpComponent] SPA navigation falhou — hard redirect /login');
+       window.location.assign('/login');
+     } catch (err) {
+       console.error('[SignUpComponent] erro ao navegar para /login:', err);
+       window.location.assign('/login');
+     }
+   }
 }

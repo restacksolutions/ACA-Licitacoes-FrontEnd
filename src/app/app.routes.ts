@@ -1,5 +1,8 @@
 // src/app/app.routes.ts
 import { Routes } from '@angular/router';
+import { AuthGuard } from './core/guards/auth.guard';
+import { GuestGuard } from './core/guards/guest.guard';
+import { RoleGuard } from './core/guards/role.guard';
 
 import { AppLayoutComponent } from './shared/layout/app-layout/app-layout.component';
 
@@ -25,8 +28,8 @@ export const routes: Routes = [
   {
     path: '',
     component: AppLayoutComponent,
-    canActivate: [() => import('./core/guards/auth.guard').then(m => m.AuthGuard)],
-    canActivateChild: [() => import('./core/guards/auth.guard').then(m => m.AuthGuard)],
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
     children: [
       {
         path: '',
@@ -53,6 +56,8 @@ export const routes: Routes = [
         path: 'tenders/new',
         component: NewTenderComponent,
         title: 'Nova Licitação - Sistema de Licitações',
+        canActivate: [RoleGuard],
+        data: { roles: ['ADMIN', 'ANALYST'] }
       },
       {
         path: 'tenders/:id',
@@ -78,11 +83,15 @@ export const routes: Routes = [
         path: 'reports',
         component: ReportsComponent,
         title: 'Relatórios - Sistema de Licitações',
+        canActivate: [RoleGuard],
+        data: { roles: ['ADMIN', 'ANALYST'] }
       },
       {
         path: 'settings',
         component: SettingsComponent,
         title: 'Configurações - Sistema de Licitações',
+        canActivate: [RoleGuard],
+        data: { roles: ['ADMIN'] }
       },
       {
         path: 'profile',
@@ -92,10 +101,25 @@ export const routes: Routes = [
     ],
   },
 
-  // Auth (públicas)
-  { path: 'login',  component: SignInComponent, title: 'Login - Sistema de Licitações' },
-  { path: 'signin', component: SignInComponent, title: 'Login - Sistema de Licitações' },
-  { path: 'signup', component: SignUpComponent, title: 'Cadastro - Sistema de Licitações' },
+  // Auth (públicas) - redireciona usuários logados
+  { 
+    path: 'login',  
+    component: SignInComponent, 
+    title: 'Login - Sistema de Licitações',
+    canActivate: [GuestGuard]
+  },
+  { 
+    path: 'signin', 
+    component: SignInComponent, 
+    title: 'Login - Sistema de Licitações',
+    canActivate: [GuestGuard]
+  },
+  { 
+    path: 'signup', 
+    component: SignUpComponent, 
+    title: 'Cadastro - Sistema de Licitações',
+    canActivate: [GuestGuard]
+  },
 
   // Fallback
   { path: '**', redirectTo: 'login' },
