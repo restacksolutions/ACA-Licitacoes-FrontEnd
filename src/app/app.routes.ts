@@ -18,6 +18,7 @@ import { VehicleDetailComponent } from './pages/vehicles/vehicle-detail/vehicle-
 import { ReportsComponent } from './pages/reports/reports.component';
 import { SettingsComponent } from './pages/settings/settings.component';
 import { ProfileComponent } from './pages/profile/profile.component';
+import { CompanyComponent } from './pages/company/company.component';
 
 // Auth pages (públicas)
 import { SignInComponent } from './pages/auth-pages/sign-in/sign-in.component';
@@ -55,9 +56,7 @@ export const routes: Routes = [
       {
         path: 'tenders/new',
         component: NewTenderComponent,
-        title: 'Nova Licitação - Sistema de Licitações',
-        canActivate: [RoleGuard],
-        data: { roles: ['ADMIN', 'ANALYST'] }
+        title: 'Nova Licitação - Sistema de Licitações'
       },
       {
         path: 'tenders/:id',
@@ -82,21 +81,22 @@ export const routes: Routes = [
       {
         path: 'reports',
         component: ReportsComponent,
-        title: 'Relatórios - Sistema de Licitações',
-        canActivate: [RoleGuard],
-        data: { roles: ['ADMIN', 'ANALYST'] }
+        title: 'Relatórios - Sistema de Licitações'
       },
       {
         path: 'settings',
         component: SettingsComponent,
-        title: 'Configurações - Sistema de Licitações',
-        canActivate: [RoleGuard],
-        data: { roles: ['ADMIN'] }
+        title: 'Configurações - Sistema de Licitações'
       },
       {
         path: 'profile',
         component: ProfileComponent,
         title: 'Perfil - Sistema de Licitações',
+      },
+      {
+        path: 'company',
+        component: CompanyComponent,
+        title: 'Empresa - Sistema de Licitações'
       },
     ],
   },

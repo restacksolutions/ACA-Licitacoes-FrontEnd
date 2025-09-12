@@ -5,16 +5,13 @@ import { Router } from '@angular/router';
 import { supabase } from '../../core/supa';
 
 export interface User {
-  id: string;          // app_users.id
+  id: string;          // app_users.id ou fallback
   email: string;
   name: string;
-  role: 'ADMIN' | 'ANALYST' | 'TECH'; // mapeado de role_company (owner/admin/member/viewer)
+  role: 'ADMIN' | 'ANALYST' | 'TECH';
   company_id: string;
   created_at: string;
 }
-
-export interface LoginRequest { email: string; password: string; }
-export interface LoginResponse { access_token: string; token_type: string; }
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -24,83 +21,58 @@ export class AuthService {
   getLastError() { return this.lastErrorMessage; }
 
   constructor(private router: Router) {
-    // Sessão inicial
+    // sessão inicial
     supabase.auth.getSession().then(async ({ data }) => {
       const session = data.session;
-      if (session) {
+      if (session?.access_token) {
         localStorage.setItem('access_token', session.access_token);
-        try {
-          await this.loadUserProfile(); // carrega app_user + empresa + papel
-        } catch (e) {
-          console.warn('[AuthService] loadUserProfile falhou na inicialização:', e);
-          this.clearAuthData();
-        }
-      } else {
-        // Se não há sessão, limpa tudo
-        this.clearAuthData();
+        try { await this.loadUserProfile(); } catch { /* tolerante */ }
       }
     });
 
-    // Sincroniza mudanças de sessão
+    // sincroniza eventos de auth
     supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('[AuthState]', event, { hasSession: !!session });
       if (event === 'SIGNED_OUT' || !session) {
-        this.clearAuthData();
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('current_user');
+        this.currentUserSubject.next(null);
       } else if (event === 'SIGNED_IN') {
-        localStorage.setItem('access_token', session.access_token);
-        try {
-          await this.loadUserProfile();
-        } catch (e) {
-          console.warn('[AuthState] loadUserProfile falhou:', e);
-          this.clearAuthData();
-        }
+        if (session.access_token) localStorage.setItem('access_token', session.access_token);
+        try { await this.loadUserProfile(); } catch (e) { console.warn('[AuthState] loadUserProfile erro:', e); }
       }
     });
 
-    // Recupera do localStorage apenas se há token válido
-    const token = localStorage.getItem('access_token');
     const saved = localStorage.getItem('current_user');
-    if (token && saved) {
-      try {
-        const user = JSON.parse(saved);
-        if (user && user.id && user.email) {
-          this.currentUserSubject.next(user);
-        } else {
-          this.clearAuthData();
-        }
-      } catch (e) {
-        console.warn('[AuthService] Erro ao recuperar usuário do localStorage:', e);
-        this.clearAuthData();
-      }
-    } else {
-      this.clearAuthData();
+    if (saved) {
+      try { this.currentUserSubject.next(JSON.parse(saved)); } catch {}
     }
   }
 
-  /** LOGIN via Supabase Auth */
+  /** LOGIN: sucesso => true, falha => false; tolerante a falhas de perfil */
   login(email: string, password: string): Observable<boolean> {
     return from(supabase.auth.signInWithPassword({ email, password })).pipe(
       mergeMap(async ({ data, error }) => {
         console.log('[AuthService.login] result', { hasSession: !!data?.session, err: error?.message || null });
         if (error) throw error;
+        if (data.session?.access_token) localStorage.setItem('access_token', data.session.access_token);
 
-        if (data.session?.access_token) {
-          localStorage.setItem('access_token', data.session.access_token);
-        }
-
-        try {
+        // carrega perfil (tolerante)
+        try { 
           await this.loadUserProfile();
-        } catch (e) {
-          console.warn('[AuthService.login] loadUserProfile falhou:', e);
-          // fallback mínimo
+          console.log('[AuthService.login] loadUserProfile concluído com sucesso');
+        }
+        catch (e) {
+          console.warn('[AuthService.login] loadUserProfile falhou, usando perfil básico ADMIN');
           const basicUser: User = {
             id: data.user?.id || email,
             email: data.user?.email || email,
-            name: (data.user?.user_metadata as any)?.full_name || email,
-            role: 'ADMIN',
+            name: (data.user?.user_metadata as any)?.full_name || (data.user?.email ?? email),
+            role: 'ADMIN', // SEMPRE ADMIN como padrão
             company_id: '',
             created_at: new Date().toISOString(),
           };
+          console.log('[AuthService.login] Perfil básico criado:', basicUser);
           localStorage.setItem('current_user', JSON.stringify(basicUser));
           this.currentUserSubject.next(basicUser);
         }
@@ -117,19 +89,18 @@ export class AuthService {
     );
   }
 
-   /**
-    * SIGN UP:
-    * - envia metadata da empresa no signup (trigger no DB cria app_users/companies/membership)
-    * - se vier sessão: salva token, carrega perfil e **REDIRECIONA PARA /dashboard**
-    * - se NÃO vier sessão (projetos com confirmação de e-mail): **REDIRECIONA PARA /login** com mensagem amigável
-    */
+  /**
+   * SIGN UP (email verification OFF):
+   * - envia metadata da empresa (trigger no DB cria app_users/companies/company_members)
+   * - sessão vem imediatamente; salvamos token, tentamos perfil (tolerante)
+   * - fazemos signOut e deixamos o componente redirecionar para /login
+   */
   async signUpAndOnboard(payload: {
     fullName: string; email: string; password: string;
     companyName: string; cnpj?: string; phone?: string; address?: string;
   }): Promise<boolean> {
     console.log('[AuthService.signUpAndOnboard] payload', { ...payload, password: '***' });
 
-    // 1) Criar conta com metadata lida pelo trigger
     const { data: signUpData, error: e1 } = await supabase.auth.signUp({
       email: payload.email,
       password: payload.password,
@@ -146,216 +117,188 @@ export class AuthService {
     console.log('[AuthService.signUpAndOnboard] signUp', { hasSession: !!signUpData?.session, err: e1?.message || null });
     if (e1) throw new Error(this.mapAuthError(e1));
 
-    // 2) Fluxo A: projetos com confirmação de e-mail (não veio sessão)
     if (!signUpData.session?.access_token) {
-      console.log('[AuthService.signUpAndOnboard] sem sessão (provável confirmação de e-mail) → ir para /login');
-      // opcional: gravar info para UI
-      this.lastErrorMessage = 'Conta criada. Verifique seu e-mail para confirmar o cadastro.';
-      await this.navigateToLoginSafe();
-      return true;
+      // com verificação OFF isso não deveria acontecer; trate como erro explícito
+      this.lastErrorMessage = 'Sessão não criada após o cadastro. Revise as configurações do Auth.';
+      throw new Error(this.lastErrorMessage);
     }
 
-     // 3) Fluxo B: sessão veio (confirmação desativada) → salva token, carrega perfil e vai para dashboard
-     localStorage.setItem('access_token', signUpData.session.access_token);
-     console.log('[AuthService.signUpAndOnboard] Token salvo, carregando perfil...');
+    localStorage.setItem('access_token', signUpData.session.access_token);
 
-     try {
-       await this.loadUserProfile();
-       console.log('[AuthService.signUpAndOnboard] perfil carregado com sucesso');
-     } catch (profileError) {
-       console.warn('[AuthService.signUpAndOnboard] loadUserProfile falhou, criando usuário básico:', profileError);
-       // Cria usuário básico como fallback
-       const basicUser: User = {
-         id: signUpData.user?.id || payload.email,
-         email: signUpData.user?.email || payload.email,
-         name: payload.fullName,
-         role: 'ADMIN',
-         company_id: '',
-         created_at: new Date().toISOString(),
-       };
-       localStorage.setItem('current_user', JSON.stringify(basicUser));
-       this.currentUserSubject.next(basicUser);
-     }
+    // tenta perfil (tolerante)
+    try { await this.loadUserProfile(); }
+    catch (e) { console.warn('[AuthService.signUpAndOnboard] loadUserProfile falhou (ok):', e); }
 
-     // 4) Redireciona para dashboard (usuário já está logado)
-     console.log('[AuthService.signUpAndOnboard] Redirecionando para dashboard...');
-     console.log('[AuthService.signUpAndOnboard] Usuário atual:', this.currentUserSubject.value);
-     console.log('[AuthService.signUpAndOnboard] Token no localStorage:', !!localStorage.getItem('access_token'));
-     
-     // Navega diretamente para o dashboard
-     await this.navigateToDashboardSafe();
-     
-     return true;
+    // sai da sessão e deixa o componente redirecionar para /login
+    try { await supabase.auth.signOut(); }
+    catch (e) { console.warn('[AuthService.signUpAndOnboard] signOut falhou:', e); }
+
+    this.lastErrorMessage = 'Conta criada com sucesso! Faça login para continuar.';
+    return true;
   }
 
   logout(): void {
-    console.log('[AuthService] Iniciando logout...');
+    console.log('[AuthService.logout] Iniciando logout...');
     
-    // 1) Limpa o estado do usuário
-    this.currentUserSubject.next(null);
-    
-    // 2) Limpa o localStorage completamente
+    // Limpa dados do localStorage
     localStorage.removeItem('access_token');
     localStorage.removeItem('current_user');
-    localStorage.removeItem('pending_onboarding');
     
-    // 3) Faz logout do Supabase
-    supabase.auth.signOut();
+    // Limpa o estado do usuário
+    this.currentUserSubject.next(null);
     
-    // 4) Redireciona para login
-    console.log('[AuthService] Redirecionando para /login...');
-    this.router.navigate(['/login']).then(() => {
-      console.log('[AuthService] Logout concluído');
+    // Faz logout do Supabase
+    supabase.auth.signOut().then(() => {
+      console.log('[AuthService.logout] Supabase signOut concluído');
     }).catch((error) => {
-      console.error('[AuthService] Erro ao redirecionar:', error);
+      console.warn('[AuthService.logout] Erro no signOut do Supabase:', error);
+    });
+    
+    // Redireciona para login
+    this.router.navigate(['/login']).then(() => {
+      console.log('[AuthService.logout] Redirecionamento para /login concluído');
+    }).catch((error) => {
+      console.warn('[AuthService.logout] Erro no redirecionamento:', error);
       // Fallback: redirecionamento forçado
       window.location.href = '/login';
     });
   }
 
-  getToken(): string | null {
-    return localStorage.getItem('access_token');
-  }
+  getToken(): string | null { return localStorage.getItem('access_token'); }
 
   isLoggedIn(): boolean {
-    const hasToken = !!this.getToken();
-    const hasUser = !!this.currentUserSubject.value;
-    const hasValidUser = !!(this.currentUserSubject.value && 
-                           this.currentUserSubject.value.id && 
-                           this.currentUserSubject.value.email);
-    
-    console.log('[AuthService.isLoggedIn] Verificação:', {
-      hasToken,
-      hasUser,
-      hasValidUser,
-      user: this.currentUserSubject.value
-    });
-    
-    return hasToken && hasUser && hasValidUser;
+    const token = this.getToken();
+    let user = this.currentUserSubject.value;
+    const saved = localStorage.getItem('current_user');
+    if (!user && saved) {
+      try { user = JSON.parse(saved); this.currentUserSubject.next(user); } catch {}
+    }
+    return !!token;
   }
 
-  getCurrentUser(): User | null {
-    return this.currentUserSubject.value;
+  getCurrentUser(): User | null { 
+    const user = this.currentUserSubject.value;
+    console.log('[AuthService.getCurrentUser] currentUserSubject.value:', user);
+    
+    if (!user) {
+      const saved = localStorage.getItem('current_user');
+      console.log('[AuthService.getCurrentUser] localStorage current_user:', saved);
+      if (saved) {
+        try {
+          const parsedUser = JSON.parse(saved);
+          console.log('[AuthService.getCurrentUser] parsedUser do localStorage:', parsedUser);
+          this.currentUserSubject.next(parsedUser);
+          return parsedUser;
+        } catch (e) {
+          console.error('[AuthService.getCurrentUser] erro ao parsear current_user:', e);
+        }
+      }
+    }
+    
+    return user;
   }
 
-  // ===================== privados ======================
+  // Método de debug temporário
+  debugAuthState() {
+    console.log('=== DEBUG AUTH STATE ===');
+    console.log('Token:', localStorage.getItem('access_token'));
+    console.log('Current User (localStorage):', localStorage.getItem('current_user'));
+    console.log('Current User (Subject):', this.currentUserSubject.value);
+    console.log('isLoggedIn():', this.isLoggedIn());
+    console.log('getCurrentUser():', this.getCurrentUser());
+    console.log('========================');
+  }
 
-  /** Carrega app_user + empresa + papel */
+  /** Perfil tolerante: usa maybeSingle e fallbacks de session */
   private async loadUserProfile() {
-    // 1) app_users
+    console.log('[AuthService.loadUserProfile] begin');
+    const { data: sess } = await supabase.auth.getSession();
+
     const { data: appUser, error: eUser } = await supabase
       .from('app_users')
       .select('id, full_name, email, created_at')
-      .single();
-    if (eUser) throw eUser;
+      .maybeSingle();
+    if (eUser) console.warn('[AuthService.loadUserProfile] app_users erro:', eUser.message || eUser);
 
-    // 2) empresa do usuário (RLS já filtra por membro/admin)
+    let companyId = '';
     const { data: companies, error: eComp } = await supabase
       .from('companies')
       .select('id')
       .order('created_at')
       .limit(1);
-    if (eComp) throw eComp;
+    if (eComp) console.warn('[AuthService.loadUserProfile] companies erro:', eComp.message || eComp);
+    if (companies?.length) companyId = companies[0].id;
 
-    const company = companies?.[0] ?? null;
-    let roleUI: User['role'] = 'ANALYST';
-
-    if (company) {
-      // 3) papel do usuário
+    // PADRÃO: ADMIN se não conseguir carregar do banco
+    let roleUI: User['role'] = 'ADMIN';
+    if (companyId && appUser?.id) {
       const { data: mem, error: eMem } = await supabase
         .from('company_members')
         .select('role')
-        .eq('company_id', company.id)
+        .eq('company_id', companyId)
         .eq('user_id', appUser.id)
         .limit(1);
-      if (eMem) throw eMem;
-
+      if (eMem) console.warn('[AuthService.loadUserProfile] company_members erro:', eMem.message || eMem);
       const roleCompany: 'owner' | 'admin' | 'member' | 'viewer' | undefined = mem?.[0]?.role;
       roleUI = this.mapRoleToUI(roleCompany);
+    } else {
+      console.log('[AuthService.loadUserProfile] Usando role padrão ADMIN (banco não retornou dados)');
     }
 
+    const sessionUser = sess?.session?.user;
+    const email = sessionUser?.email || appUser?.email || '';
+    const name =
+      (sessionUser?.user_metadata as any)?.full_name ||
+      appUser?.full_name ||
+      email ||
+      'Usuário';
+
     const user: User = {
-      id: appUser.id,
-      email: appUser.email,
-      name: appUser.full_name ?? appUser.email,
+      id: appUser?.id || (sessionUser?.id ?? 'no-app-user'),
+      email,
+      name,
       role: roleUI,
-      company_id: company?.id ?? '',
-      created_at: appUser.created_at,
+      company_id: companyId,
+      created_at: appUser?.created_at || new Date().toISOString(),
     };
 
+    console.log('[AuthService.loadUserProfile] Usuário criado:', user);
     localStorage.setItem('current_user', JSON.stringify(user));
     this.currentUserSubject.next(user);
+    return user;
   }
 
   private mapRoleToUI(role?: 'owner' | 'admin' | 'member' | 'viewer'): User['role'] {
     if (role === 'owner' || role === 'admin') return 'ADMIN';
     if (role === 'member') return 'ANALYST';
-    return 'TECH';
+    // PADRÃO: ADMIN se role não for reconhecida
+    console.log('[AuthService.mapRoleToUI] Role não reconhecida:', role, '→ usando ADMIN como padrão');
+    return 'ADMIN';
   }
 
-   private async navigateToLoginSafe() {
-     try {
-       const ok = await this.router.navigate(['/login'], { replaceUrl: true });
-       console.log('[AuthService] navigate /login →', ok);
-       if (ok) return;
-       const ok2 = await this.router.navigateByUrl('/login', { replaceUrl: true });
-       console.log('[AuthService] navigateByUrl /login →', ok2);
-       if (ok2) return;
-       console.warn('[AuthService] SPA navigation falhou — hard redirect /login');
-       window.location.assign('/login');
-     } catch (err) {
-       console.error('[AuthService] erro ao navegar para /login:', err);
-       window.location.assign('/login');
-     }
-   }
-
-   private async navigateToDashboardSafe() {
-     try {
-       console.log('[AuthService] Tentando navegar para /dashboard...');
-       console.log('[AuthService] Router disponível:', !!this.router);
-       console.log('[AuthService] URL atual:', this.router.url);
-       
-       const ok = await this.router.navigate(['/dashboard'], { replaceUrl: true });
-       console.log('[AuthService] navigate /dashboard →', ok);
-       if (ok) {
-         console.log('[AuthService] Navegação bem-sucedida via navigate()');
-         return;
-       }
-       
-       console.log('[AuthService] Tentando navigateByUrl...');
-       const ok2 = await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
-       console.log('[AuthService] navigateByUrl /dashboard →', ok2);
-       if (ok2) {
-         console.log('[AuthService] Navegação bem-sucedida via navigateByUrl()');
-         return;
-       }
-       
-       console.warn('[AuthService] SPA navigation falhou — hard redirect /dashboard');
-       window.location.assign('/dashboard');
-     } catch (err) {
-       console.error('[AuthService] erro ao navegar para /dashboard:', err);
-       window.location.assign('/dashboard');
-     }
-   }
-
-  private clearAuthData(): void {
-    console.log('[AuthService] Limpando dados de autenticação...');
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('current_user');
-    localStorage.removeItem('pending_onboarding');
-    this.currentUserSubject.next(null);
+  async resetPasswordForEmail(email: string): Promise<void> {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/login`
+    });
+    if (error) throw error;
   }
 
-  private mapAuthError(error: any): string {
-    const m = String(error?.message || error);
-    const map: Record<string,string> = {
-      'User already registered': 'Este e-mail já está cadastrado',
-      'Invalid email': 'E-mail inválido',
-      'Password should be at least 6 characters': 'A senha deve ter pelo menos 6 caracteres',
-      'Email not confirmed': 'E-mail não confirmado',
-      'Invalid login credentials': 'Credenciais inválidas',
-      'Too many requests': 'Muitas tentativas. Tente novamente mais tarde',
-    };
-    return map[m] || m || 'Erro desconhecido';
+  async resendEmailVerification(email: string): Promise<void> {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email
+    });
+    if (error) throw error;
+  }
+
+  private mapAuthError(err: any): string {
+    const m = String(err?.message || err).toLowerCase();
+    if (/invalid login credentials|invalid credentials/.test(m)) return 'E-mail ou senha incorretos.';
+    if (/confirm|verification/.test(m)) return 'Sua conta precisa ser confirmada.';
+    if (/user already registered|email.*(exists|already)/.test(m)) return 'Este e-mail já está cadastrado.';
+    if (/password.*(weak|short)|password too weak/.test(m)) return 'Senha muito fraca.';
+    if (/rate limit|too many requests/.test(m)) return 'Muitas tentativas. Aguarde alguns minutos.';
+    if (/network|connection|timeout/.test(m)) return 'Erro de conexão. Tente novamente.';
+    return 'Falha na autenticação.';
   }
 }

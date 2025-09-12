@@ -108,6 +108,26 @@
             {{ loading ? 'Entrando...' : 'Entrar' }}
           </button>
         </div>
+
+        <!-- Links de ajuda -->
+        <div class="mt-4 text-center space-y-2">
+          <div>
+            <button
+              type="button"
+              (click)="onForgotPassword()"
+              class="text-sm text-green-600 hover:text-green-500 dark:text-green-400 dark:hover:text-green-300">
+              Esqueci minha senha
+            </button>
+          </div>
+          <div>
+            <button
+              type="button"
+              (click)="onResendVerification()"
+              class="text-sm text-green-600 hover:text-green-500 dark:text-green-400 dark:hover:text-green-300">
+              Reenviar verificação de e-mail
+            </button>
+          </div>
+        </div>
       </form>
     </div>
   </div>

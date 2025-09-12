@@ -19,88 +19,108 @@ export class SignInComponent implements OnInit {
   loading = false;
   error = '';
 
-  constructor(
-    private authService: AuthService,
-    private router: Router
-  ) {}
+  constructor(private auth: AuthService, private router: Router) {}
 
   ngOnInit() {
     console.log('[SignIn] init');
-    if (this.authService.isLoggedIn()) {
-      console.log('[SignIn] já logado → /dashboard');
-      this.router.navigate(['/dashboard']);
-    }
+    if (this.auth.isLoggedIn()) this.router.navigate(['/dashboard']);
   }
 
   async onSubmit() {
     if (!this.email || !this.password) {
-      this.error = 'Por favor, preencha todos os campos';
-      await Swal.fire({ icon: 'warning', title: 'Campos obrigatórios', text: this.error });
+      await Swal.fire({ icon: 'warning', title: 'Campos obrigatórios', text: 'Informe e-mail e senha.' });
       return;
     }
 
     this.loading = true;
-    this.error = '';
 
-    // Fallback: se algo travar, tenta forçar /dashboard em 2,5s
-    const navFallback = setTimeout(() => {
-      console.warn('[SignIn] fallback: forçando /dashboard após 2.5s');
-      this.forceDashboardNav();
+    // fallback: força /dashboard em 2.5s se algo travar
+    const fallback = setTimeout(() => {
+      console.warn('[SignIn] fallback → /dashboard');
+      this.forceDashboard();
     }, 2500);
 
     try {
-      console.log('[SignIn] calling authService.login...');
-      const ok = await firstValueFrom(this.authService.login(this.email, this.password));
-      console.log('[SignIn] login result:', ok);
+      const ok = await firstValueFrom(this.auth.login(this.email, this.password));
+      console.log('[SignIn] result:', ok);
 
       if (ok) {
-        await Swal.fire({
-          icon: 'success',
-          title: 'Login realizado!',
-          timer: 1100,
-          showConfirmButton: false
-        });
-        await this.forceDashboardNav();
+        await Swal.fire({ icon: 'success', title: 'Login realizado!', timer: 1000, showConfirmButton: false });
+        await this.forceDashboard();
       } else {
-        const msg = this.authService.getLastError?.() || 'Email ou senha incorretos';
-        this.error = msg;
-        await Swal.fire({
-          icon: 'error',
-          title: 'Não foi possível entrar',
-          text: msg
-        });
-        clearTimeout(navFallback); // em erro, não tenta navegar
+        const msg = this.auth.getLastError() || 'E-mail ou senha incorretos.';
+        await Swal.fire({ icon: 'error', title: 'Não foi possível entrar', text: msg });
+        clearTimeout(fallback);
       }
-    } catch (err: any) {
-      console.error('[SignIn] login error:', err);
-      this.error = 'Erro ao fazer login. Tente novamente.';
-      await Swal.fire({ icon: 'error', title: 'Erro', text: this.error });
-      clearTimeout(navFallback);
+    } catch (e: any) {
+      console.error('[SignIn] erro:', e);
+      await Swal.fire({ icon: 'error', title: 'Erro no login', text: 'Tente novamente.' });
+      clearTimeout(fallback);
     } finally {
       this.loading = false;
     }
   }
 
-  onSignUp() {
-    this.router.navigate(['/signup']);
+  onSignUp() { this.router.navigate(['/signup']); }
+
+  onForgotPassword() {
+    if (!this.email) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'E-mail necessário',
+        text: 'Digite seu e-mail para redefinir a senha.'
+      });
+      return;
+    }
+
+    this.auth.resetPasswordForEmail(this.email).then(() => {
+      Swal.fire({
+        icon: 'success',
+        title: 'E-mail enviado',
+        text: 'Verifique sua caixa de entrada para redefinir a senha.'
+      });
+    }).catch((error) => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erro',
+        text: 'Não foi possível enviar o e-mail. Tente novamente.'
+      });
+    });
   }
 
-  /** Navegação robusta para /dashboard */
-  private async forceDashboardNav() {
+  onResendVerification() {
+    if (!this.email) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'E-mail necessário',
+        text: 'Digite seu e-mail para reenviar a verificação.'
+      });
+      return;
+    }
+
+    this.auth.resendEmailVerification(this.email).then(() => {
+      Swal.fire({
+        icon: 'success',
+        title: 'E-mail enviado',
+        text: 'Verifique sua caixa de entrada para confirmar sua conta.'
+      });
+    }).catch((error) => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erro',
+        text: 'Não foi possível reenviar o e-mail. Tente novamente.'
+      });
+    });
+  }
+
+  private async forceDashboard() {
     try {
-      console.log('[SignIn] navigating → /dashboard …');
       const ok = await this.router.navigate(['/dashboard'], { replaceUrl: true });
-      console.log('[SignIn] navigate /dashboard →', ok);
       if (ok) return;
-
       const ok2 = await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
-      console.log('[SignIn] navigateByUrl /dashboard →', ok2);
       if (ok2) return;
-
-      console.warn('[SignIn] SPA navigation falhou — hard redirect /dashboard');
       window.location.assign('/dashboard');
-    } catch (err) {
-      console.error('[SignIn] erro ao navegar para /dashboard:', err);
+    } catch {
       window.location.assign('/dashboard');
     }
   }

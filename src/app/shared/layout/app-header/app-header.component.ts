@@ -65,6 +65,11 @@ export class AppHeaderComponent {
     this.authService.logout();
   }
 
+  onDebug() {
+    console.log('[AppHeader] Botão de debug clicado');
+    this.authService.debugAuthState();
+  }
+
   get isLoggedIn(): boolean {
     return this.authService.isLoggedIn();
   }
