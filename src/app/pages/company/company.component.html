@@ -202,24 +202,32 @@
       </div>
     </div>
 
+    
+
     <!-- Funcionários -->
     <div *ngIf="activeTab === 'members'" class="space-y-6">
-      <!-- Header com Botão de Adicionar -->
-      <div class="flex justify-between items-center">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Funcionários da Empresa</h3>
-        <button 
-          (click)="toggleAddMemberForm()"
-          class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
-          <i class="fas fa-plus mr-2"></i>
-          {{ showAddMemberForm ? 'Cancelar' : 'Adicionar Funcionário' }}
-        </button>
-      </div>
-
-      <!-- Formulário de Adicionar Funcionário -->
-      <div *ngIf="showAddMemberForm" class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-4">Adicionar Novo Funcionário</h4>
-        <form (ngSubmit)="addMember()" class="space-y-4">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Funcionários da Empresa</h3>
+              </div>
+            </div>
+            <button 
+              (click)="toggleAddMemberForm()"
+              class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
+              <i class="fas fa-plus mr-2"></i>
+              {{ showAddMemberForm ? 'Cancelar' : 'Adicionar Funcionário' }}
+            </button>
+          </div>
+        </div>
+        
+        <!-- Formulário de Adicionar Funcionário -->
+        <div *ngIf="showAddMemberForm" class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-4">Adicionar Novo Funcionário</h4>
+          <form (ngSubmit)="addMember()" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email *</label>
               <input 
@@ -358,48 +366,37 @@
         </div>
       </div>
     </div>
+    </div>
 
     <!-- Documentos -->
     <div *ngIf="activeTab === 'documents'" class="space-y-6">
       <!-- Aviso de Documentos Expirados -->
-      <div *ngIf="getExpiredDocumentsCount() > 0" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-        <div class="flex items-center">
-          <i class="fas fa-exclamation-triangle text-red-500 mr-3"></i>
-          <div>
-            <h3 class="text-lg font-semibold text-red-800 dark:text-red-200">Atenção!</h3>
-            <p class="text-red-700 dark:text-red-300">
-              Você tem {{ getExpiredDocumentsCount() }} documento(s) expirado(s) que precisam ser renovados.
-            </p>
-          </div>
-        </div>
-      </div>
-
+      
       <!-- Card CNPJ com Documentos por Status -->
       <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <div class="flex items-center justify-between">
             <div class="flex items-center">
-              <div class="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mr-4">
-                <i class="fas fa-building text-green-600 dark:text-green-400 text-xl"></i>
-              </div>
               <div>
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">CNPJ: 12.345.678/0001-90</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Controle de Documentos</h3>
                 <p class="text-sm text-gray-600 dark:text-gray-400">Empresa Exemplo Ltda</p>
               </div>
             </div>
-            <div class="flex space-x-2">
-              <button class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
-                <i class="fas fa-upload mr-2"></i>
-                Enviar Documentos
-              </button>
-              <button class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm">
-                <i class="fas fa-download mr-2"></i>
-                Baixar Relatório
-              </button>
+            
+          </div>
+        </div>
+        
+        <div *ngIf="getExpiredDocumentsCount() > 0" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <div class="flex items-center">
+            <i class="fas fa-exclamation-triangle text-red-500 mr-3"></i>
+            <div>
+              <h3 class="text-lg font-semibold text-red-800 dark:text-red-200">Atenção!</h3>
+              <p class="text-red-700 dark:text-red-300">
+                Você tem {{ getExpiredDocumentsCount() }} documento(s) expirado(s) que precisam ser renovados.
+              </p>
             </div>
           </div>
         </div>
-
         <!-- Documentos por Status -->
         <div class="p-6">
           <!-- Documentos Válidos (Verde) -->
