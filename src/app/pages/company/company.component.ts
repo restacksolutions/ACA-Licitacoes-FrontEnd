@@ -1,10 +1,40 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { CompanyService, Company, CompanyMember, CompanyDocument, CompanyUpdateData, DocumentUpdateData } from './company.service';
 import { AuthService } from '../auth-pages/auth.service';
+
+// Interfaces para configuração dos formulários e tabelas
+interface FormField {
+  key: string;
+  label: string;
+  type: string;
+  required?: boolean;
+  options?: { value: string; label: string }[];
+  rows?: number;
+  value?: any;
+}
+
+interface TableColumn {
+  key: string;
+  label: string;
+}
+
+interface DocumentStatusGroup {
+  title: string;
+  count: number;
+  documents: CompanyDocument[];
+  colorClass: string;
+  cardClass: string;
+  iconClass: string;
+  textClass: string;
+  buttonClass: string;
+  badgeClass: string;
+  badgeText: string;
+  dateLabel: string;
+}
 
 @Component({
   selector: 'app-company',
@@ -14,17 +44,16 @@ import { AuthService } from '../auth-pages/auth.service';
   styleUrls: ['./company.component.css']
 })
 export class CompanyComponent implements OnInit, OnDestroy {
-  @ViewChild('logoInput') logoInput!: ElementRef<HTMLInputElement>;
-  @ViewChild('letterheadInput') letterheadInput!: ElementRef<HTMLInputElement>;
-  @ViewChild('documentInput') documentInput!: ElementRef<HTMLInputElement>;
-
   private destroy$ = new Subject<void>();
+
+  // ===== ESTADO DA APLICAÇÃO =====
 
   // Company Info
   company: Company | null = null;
   companyLoading = false;
   companyError = '';
   editingCompany = false;
+  isSaving = false;
   companyForm: CompanyUpdateData = {};
 
   // Members
@@ -32,9 +61,8 @@ export class CompanyComponent implements OnInit, OnDestroy {
   membersLoading = false;
   membersError = '';
   showAddMemberForm = false;
-  newMemberEmail = '';
-  newMemberRole: 'admin' | 'member' = 'member';
-  editingMember: string | null = null;
+  isAddingMember = false;
+  memberForm: { email: string; role: 'admin' | 'member' } = { email: '', role: 'member' };
 
   // Documents
   documents: CompanyDocument[] = [];
@@ -42,7 +70,8 @@ export class CompanyComponent implements OnInit, OnDestroy {
   documentsLoading = false;
   documentsError = '';
   showAddDocumentForm = false;
-  newDocument: DocumentUpdateData = {
+  isAddingDocument = false;
+  documentForm: DocumentUpdateData = {
     doc_type: 'outros',
     doc_number: '',
     issuer: '',
@@ -54,17 +83,120 @@ export class CompanyComponent implements OnInit, OnDestroy {
   // UI State
   activeTab: 'info' | 'members' | 'documents' = 'info';
 
+  // ===== CONFIGURAÇÕES DOS FORMULÁRIOS =====
+  
+  get companyDisplayFields(): FormField[] {
+    return [
+      { key: 'name', label: 'Nome da Empresa', type: 'text', value: this.company?.name || 'Não informado' },
+      { key: 'cnpj', label: 'CNPJ', type: 'text', value: this.company?.cnpj || 'Não informado' },
+      { key: 'legal_name', label: 'Razão Social', type: 'text', value: this.company?.legal_name || 'Não informado' },
+      { key: 'state_registration', label: 'Inscrição Estadual', type: 'text', value: this.company?.state_registration || 'Não informado' },
+      { key: 'municipal_registration', label: 'Inscrição Municipal', type: 'text', value: this.company?.municipal_registration || 'Não informado' },
+      { key: 'phone', label: 'Telefone', type: 'text', value: this.company?.phone || 'Não informado' },
+      { key: 'address', label: 'Endereço', type: 'text', value: this.company?.address || 'Não informado' },
+      { key: 'email', label: 'Email', type: 'email', value: this.company?.email || 'Não informado' }
+    ];
+  }
+
+  companyFormFields: FormField[] = [
+    { key: 'name', label: 'Nome da Empresa', type: 'text', required: true },
+    { key: 'cnpj', label: 'CNPJ', type: 'text', required: true },
+    { key: 'legal_name', label: 'Razão Social', type: 'text' },
+    { key: 'state_registration', label: 'Inscrição Estadual', type: 'text' },
+    { key: 'municipal_registration', label: 'Inscrição Municipal', type: 'text' },
+    { key: 'phone', label: 'Telefone', type: 'text' },
+    { key: 'address', label: 'Endereço', type: 'textarea', rows: 3 },
+    { key: 'email', label: 'Email', type: 'email' }
+  ];
+
+  memberFormFields: FormField[] = [
+    { 
+      key: 'email', 
+      label: 'Email', 
+      type: 'email', 
+      required: true 
+    },
+    { 
+      key: 'role', 
+      label: 'Função', 
+      type: 'select', 
+      required: true,
+      options: [
+        { value: 'member', label: 'Membro' },
+        { value: 'admin', label: 'Administrador' }
+      ]
+    }
+  ];
+
+  memberTableColumns: TableColumn[] = [
+    { key: 'name', label: 'Funcionário' },
+    { key: 'email', label: 'Email' },
+    { key: 'role', label: 'Função' },
+    { key: 'created_at', label: 'Data de Entrada' },
+    { key: 'status', label: 'Status' },
+    { key: 'actions', label: 'Ações' }
+  ];
+
+  // ===== COMPUTED PROPERTIES =====
+  
+  get expiredDocumentsCount(): number {
+    return this.getDocumentsByStatus('expired').length;
+  }
+
+  get documentStatusGroups(): DocumentStatusGroup[] {
+    return [
+      {
+        title: 'Documentos Válidos',
+        count: this.getDocumentsByStatus('valid').length,
+        documents: this.getDocumentsByStatus('valid'),
+        colorClass: 'bg-green-500',
+        cardClass: 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700',
+        iconClass: 'fas fa-file-pdf text-green-600',
+        textClass: 'text-green-600 dark:text-green-400',
+        buttonClass: 'bg-green-600 hover:bg-green-700',
+        badgeClass: 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200',
+        badgeText: 'Válido',
+        dateLabel: 'Expira em'
+      },
+      {
+        title: 'Documentos com Aviso',
+        count: this.getDocumentsByStatus('warning').length,
+        documents: this.getDocumentsByStatus('warning'),
+        colorClass: 'bg-yellow-500',
+        cardClass: 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700',
+        iconClass: 'fas fa-file-pdf text-yellow-600',
+        textClass: 'text-yellow-600 dark:text-yellow-400',
+        buttonClass: 'bg-yellow-600 hover:bg-yellow-700',
+        badgeClass: 'bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200',
+        badgeText: 'Atenção',
+        dateLabel: 'Expira em'
+      },
+      {
+        title: 'Documentos Expirados',
+        count: this.getDocumentsByStatus('expired').length,
+        documents: this.getDocumentsByStatus('expired'),
+        colorClass: 'bg-red-500',
+        cardClass: 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700',
+        iconClass: 'fas fa-file-pdf text-red-600',
+        textClass: 'text-red-600 dark:text-red-400',
+        buttonClass: 'bg-red-600 hover:bg-red-700',
+        badgeClass: 'bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200',
+        badgeText: 'Expirado',
+        dateLabel: 'Expirou em'
+      }
+    ];
+  }
+
   constructor(
     private companyService: CompanyService,
     private authService: AuthService,
     private router: Router
   ) {}
 
+  // ===== LIFECYCLE HOOKS =====
+
   ngOnInit() {
-    this.loadCompanyData();
-    this.loadMembers();
-    this.loadDocuments();
-    this.loadMissingDocuments();
+    this.initializeComponent();
   }
 
   ngOnDestroy() {
@@ -72,12 +204,24 @@ export class CompanyComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  // ===== MÉTODOS DE INICIALIZAÇÃO =====
+  
+  private initializeComponent() {
+    this.loadCompanyData();
+    this.loadMembers();
+    this.loadDocuments();
+    this.loadMissingDocuments();
+  }
+
+  // ===== MÉTODOS DE NAVEGAÇÃO =====
+
   setActiveTab(tab: 'info' | 'members' | 'documents') {
     this.activeTab = tab;
   }
 
-  // Company Methods
-  loadCompanyData() {
+  // ===== MÉTODOS DA EMPRESA =====
+  
+  private loadCompanyData() {
     this.companyLoading = true;
     this.companyError = '';
 
@@ -96,40 +240,72 @@ export class CompanyComponent implements OnInit, OnDestroy {
       });
   }
 
-  toggleEditCompany() {
+  onToggleEditCompany() {
     this.editingCompany = !this.editingCompany;
     if (this.editingCompany && this.company) {
-      this.companyForm = {
-        name: this.company.name || '',
-        cnpj: this.company.cnpj || '',
-        legal_name: this.company.legal_name || '',
-        state_registration: this.company.state_registration || '',
-        municipal_registration: this.company.municipal_registration || '',
-        phone: this.company.phone || '',
-        address: this.company.address || '',
-        email: this.company.email || ''
-      };
+      this.initializeCompanyForm();
     }
   }
 
-  cancelEditCompany() {
+  private initializeCompanyForm() {
+    this.companyForm = {
+      name: this.company?.name || '',
+      cnpj: this.company?.cnpj || '',
+      legal_name: this.company?.legal_name || '',
+      state_registration: this.company?.state_registration || '',
+      municipal_registration: this.company?.municipal_registration || '',
+      phone: this.company?.phone || '',
+      address: this.company?.address || '',
+      email: this.company?.email || ''
+    };
+  }
+
+  onCancelEditCompany() {
     this.editingCompany = false;
     this.companyForm = {};
   }
 
-  saveCompany() {
-    console.log('[Company] Salvando informações da empresa:', this.companyForm);
-    
-    // TODO: Implementar chamada para API
-    // Por enquanto, apenas mostra um alerta
-    alert('Informações da empresa salvas com sucesso!\n\nEsta funcionalidade será implementada em breve.');
-    
+  onSaveCompany() {
+    if (!this.validateCompanyForm()) {
+      return;
+    }
+
+    this.isSaving = true;
+    this.companyError = '';
+
+    this.companyService.updateCompanyInfo(this.companyForm)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (updatedCompany: Company) => {
+          this.company = updatedCompany;
     this.editingCompany = false;
     this.companyForm = {};
+          this.isSaving = false;
+          // TODO: Mostrar notificação de sucesso
+        },
+        error: (error: any) => {
+          this.companyError = 'Erro ao salvar informações da empresa';
+          this.isSaving = false;
+          console.error('Save company error:', error);
+        }
+      });
   }
 
-  // Members Methods
-  loadMembers() {
+  private validateCompanyForm(): boolean {
+    if (!this.companyForm.name?.trim()) {
+      this.companyError = 'Nome da empresa é obrigatório';
+      return false;
+    }
+    if (!this.companyForm.cnpj?.trim()) {
+      this.companyError = 'CNPJ é obrigatório';
+      return false;
+    }
+    return true;
+  }
+
+  // ===== MÉTODOS DE FUNCIONÁRIOS =====
+  
+  private loadMembers() {
     this.membersLoading = true;
     this.membersError = '';
 
@@ -148,72 +324,92 @@ export class CompanyComponent implements OnInit, OnDestroy {
       });
   }
 
-  toggleAddMemberForm() {
+  onToggleAddMemberForm() {
     this.showAddMemberForm = !this.showAddMemberForm;
     if (!this.showAddMemberForm) {
-      this.newMemberEmail = '';
-      this.newMemberRole = 'member';
+      this.resetMemberForm();
     }
   }
 
-  addMember() {
-    if (!this.newMemberEmail) {
-      alert('Por favor, informe o email do funcionário.');
+  private resetMemberForm() {
+    this.memberForm = { email: '', role: 'member' };
+  }
+
+  onAddMember() {
+    if (!this.validateMemberForm()) {
       return;
     }
 
-    console.log('[Company] Adicionando funcionário:', {
-      email: this.newMemberEmail,
-      role: this.newMemberRole
-    });
+    this.isAddingMember = true;
+    this.membersError = '';
 
-    // TODO: Implementar chamada para API
-    // Por enquanto, apenas mostra um alerta
-    alert(`Funcionário adicionado com sucesso!\n\nEmail: ${this.newMemberEmail}\nFunção: ${this.newMemberRole}\n\nEsta funcionalidade será implementada em breve.`);
-    
-    this.toggleAddMemberForm();
+    this.companyService.addMember(this.memberForm.email, this.memberForm.role)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (newMember: CompanyMember) => {
+          this.members.push(newMember);
+          this.showAddMemberForm = false;
+          this.resetMemberForm();
+          this.isAddingMember = false;
+          // TODO: Mostrar notificação de sucesso
+        },
+        error: (error: any) => {
+          this.membersError = 'Erro ao adicionar funcionário';
+          this.isAddingMember = false;
+          console.error('Add member error:', error);
+        }
+      });
   }
 
-  editMember(member: CompanyMember) {
-    console.log('[Company] Editando funcionário:', member);
-    
-    // TODO: Implementar modal de edição
-    alert(`Editando funcionário: ${member.name || member.email}\n\nEsta funcionalidade será implementada em breve.`);
-  }
-
-  removeMember(member: CompanyMember) {
-    if (confirm(`Tem certeza que deseja remover o funcionário ${member.name || member.email}?`)) {
-      console.log('[Company] Removendo funcionário:', member);
-      
-      // TODO: Implementar chamada para API
-      alert(`Funcionário ${member.name || member.email} removido com sucesso!\n\nEsta funcionalidade será implementada em breve.`);
+  private validateMemberForm(): boolean {
+    if (!this.memberForm.email?.trim()) {
+      this.membersError = 'Email é obrigatório';
+      return false;
     }
+    if (!this.isValidEmail(this.memberForm.email)) {
+      this.membersError = 'Email inválido';
+      return false;
+    }
+    return true;
+  }
+
+  onEditMember(member: CompanyMember) {
+    // TODO: Implementar modal de edição
+    console.log('Editando funcionário:', member);
+  }
+
+  onRemoveMember(member: CompanyMember) {
+    if (confirm(`Tem certeza que deseja remover o funcionário ${this.getMemberDisplayName(member)}?`)) {
+      this.companyService.removeMember(member.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.members = this.members.filter(m => m.id !== member.id);
+            // TODO: Mostrar notificação de sucesso
+          },
+          error: (error: any) => {
+            this.membersError = 'Erro ao remover funcionário';
+            console.error('Remove member error:', error);
+          }
+        });
+    }
+  }
+
+  getMemberDisplayName(member: CompanyMember): string {
+    return member.name || member.email || 'Nome não informado';
   }
 
   getRoleClass(role: string): string {
-    switch (role) {
-      case 'admin':
-        return 'role-admin';
-      case 'member':
-        return 'role-member';
-      default:
-        return 'role-member';
-    }
+    return role === 'admin' ? 'role-admin' : 'role-member';
   }
 
   getRoleLabel(role: string): string {
-    switch (role) {
-      case 'admin':
-        return 'Administrador';
-      case 'member':
-        return 'Membro';
-      default:
-        return 'Membro';
-    }
+    return role === 'admin' ? 'Administrador' : 'Membro';
   }
 
-  // Documents Methods
-  loadDocuments() {
+  // ===== MÉTODOS DE DOCUMENTOS =====
+  
+  private loadDocuments() {
     this.documentsLoading = true;
     this.documentsError = '';
 
@@ -232,393 +428,17 @@ export class CompanyComponent implements OnInit, OnDestroy {
       });
   }
 
-  loadMissingDocuments() {
-    // Mock data para documentos faltantes com datas variadas (hoje: 12/09/2025)
-    this.missingDocuments = [
-      // DOCUMENTOS EXPIRADOS (vermelho) - expirados há mais de 1 dia
-      {
-        id: '1',
-        company_id: 'company-1',
-        doc_type: 'cnpj',
-        doc_number: '12.345.678/0001-90',
-        issuer: 'Receita Federal',
-        issue_date: '2023-01-15',
-        expires_at: '2024-12-31', // Expirado há 255 dias
-        file_path: null,
-        notes: 'CNPJ',
-        version: 1,
-        created_at: '2023-01-15',
-        updated_at: '2023-01-15'
-      },
-      {
-        id: '2',
-        company_id: 'company-1',
-        doc_type: 'inscricao_estadual',
-        doc_number: '123456789',
-        issuer: 'Sefaz',
-        issue_date: '2023-02-01',
-        expires_at: '2024-12-31', // Expirado há 255 dias
-        file_path: null,
-        notes: 'Inscrição Estadual',
-        version: 1,
-        created_at: '2023-02-01',
-        updated_at: '2023-02-01'
-      },
-      {
-        id: '3',
-        company_id: 'company-1',
-        doc_type: 'alvara',
-        doc_number: 'ALV-2023-001',
-        issuer: 'Prefeitura',
-        issue_date: '2023-03-01',
-        expires_at: '2024-03-01', // Expirado há 195 dias
-        file_path: null,
-        notes: 'Alvará de Funcionamento',
-        version: 1,
-        created_at: '2023-03-01',
-        updated_at: '2023-03-01'
-      },
-      {
-        id: '4',
-        company_id: 'company-1',
-        doc_type: 'contrato_social',
-        doc_number: 'CS-2023-001',
-        issuer: 'Cartório',
-        issue_date: '2023-01-10',
-        expires_at: '2024-01-10', // Expirado há 245 dias
-        file_path: null,
-        notes: 'Contrato Social',
-        version: 1,
-        created_at: '2023-01-10',
-        updated_at: '2023-01-10'
-      },
-      {
-        id: '5',
-        company_id: 'company-1',
-        doc_type: 'certidao_fgts',
-        doc_number: 'CND-2023-001',
-        issuer: 'Caixa Econômica',
-        issue_date: '2023-04-01',
-        expires_at: '2024-04-01', // Expirado há 164 dias
-        file_path: null,
-        notes: 'Certidão FGTS',
-        version: 1,
-        created_at: '2023-04-01',
-        updated_at: '2023-04-01'
-      },
-      {
-        id: '6',
-        company_id: 'company-1',
-        doc_type: 'certidao_inss',
-        doc_number: 'CND-2023-002',
-        issuer: 'INSS',
-        issue_date: '2023-04-01',
-        expires_at: '2024-04-01', // Expirado há 164 dias
-        file_path: null,
-        notes: 'Certidão INSS',
-        version: 1,
-        created_at: '2023-04-01',
-        updated_at: '2023-04-01'
-      },
-      {
-        id: '7',
-        company_id: 'company-1',
-        doc_type: 'outros',
-        doc_number: 'AT-2023-001',
-        issuer: 'Órgão Competente',
-        issue_date: '2023-05-01',
-        expires_at: '2024-05-01', // Expirado há 134 dias
-        file_path: null,
-        notes: 'Atestado de Capacidade Técnica',
-        version: 1,
-        created_at: '2023-05-01',
-        updated_at: '2023-05-01'
-      },
-      {
-        id: '8',
-        company_id: 'company-1',
-        doc_type: 'outros',
-        doc_number: 'CNH-2023-001',
-        issuer: 'DETRAN',
-        issue_date: '2023-06-01',
-        expires_at: '2024-06-01', // Expirado há 103 dias
-        file_path: null,
-        notes: 'CNH Sócio',
-        version: 1,
-        created_at: '2023-06-01',
-        updated_at: '2023-06-01'
-      },
-      {
-        id: '9',
-        company_id: 'company-1',
-        doc_type: 'outros',
-        doc_number: 'CNH-2023-002',
-        issuer: 'DETRAN',
-        issue_date: '2023-07-01',
-        expires_at: '2024-07-01', // Expirado há 73 dias
-        file_path: null,
-        notes: 'CNH Procurador',
-        version: 1,
-        created_at: '2023-07-01',
-        updated_at: '2023-07-01'
-      },
-      {
-        id: '10',
-        company_id: 'company-1',
-        doc_type: 'outros',
-        doc_number: 'PROC-2023-001',
-        issuer: 'Cartório',
-        issue_date: '2023-08-01',
-        expires_at: '2024-08-01', // Expirado há 42 dias
-        file_path: null,
-        notes: 'Procuração',
-        version: 1,
-        created_at: '2023-08-01',
-        updated_at: '2023-08-01'
-      },
-      {
-        id: '11',
-        company_id: 'company-1',
-        doc_type: 'outros',
-        doc_number: 'CS-2023-002',
-        issuer: 'Cartório',
-        issue_date: '2023-09-01',
-        expires_at: '2024-09-01', // Expirado há 11 dias
-        file_path: null,
-        notes: 'Contrato Social',
-        version: 1,
-        created_at: '2023-09-01',
-        updated_at: '2023-09-01'
-      },
-      {
-        id: '12',
-        company_id: 'company-1',
-        doc_type: 'outros',
-        doc_number: 'CERT-2023-001',
-        issuer: 'Receita Federal',
-        issue_date: '2023-10-01',
-        expires_at: '2024-10-01', // Expirado há 19 dias
-        file_path: null,
-        notes: 'Certidão Simplificada',
-        version: 1,
-        created_at: '2023-10-01',
-        updated_at: '2023-10-01'
-      },
-
-      // DOCUMENTOS COM AVISO (amarelo) - expiram em 1-15 dias
-      {
-        id: '13',
-        company_id: 'company-1',
-        doc_type: 'outros',
-        doc_number: 'CICAD-2023-001',
-        issuer: 'Órgão Competente',
-        issue_date: '2024-08-15',
-        expires_at: '2025-09-15', // Expira em 3 dias
-        file_path: null,
-        notes: 'CICAD',
-        version: 1,
-        created_at: '2024-08-15',
-        updated_at: '2024-08-15'
-      },
-      {
-        id: '14',
-        company_id: 'company-1',
-        doc_type: 'inscricao_municipal',
-        doc_number: 'IM-2023-001',
-        issuer: 'Prefeitura',
-        issue_date: '2024-08-20',
-        expires_at: '2025-09-20', // Expira em 8 dias
-        file_path: null,
-        notes: 'Inscrição Municipal',
-        version: 1,
-        created_at: '2024-08-20',
-        updated_at: '2024-08-20'
-      },
-      {
-        id: '15',
-        company_id: 'company-1',
-        doc_type: 'alvara',
-        doc_number: 'ALV-2024-001',
-        issuer: 'Prefeitura',
-        issue_date: '2024-09-01',
-        expires_at: '2025-09-25', // Expira em 13 dias
-        file_path: null,
-        notes: 'Alvará de Funcionamento',
-        version: 1,
-        created_at: '2024-09-01',
-        updated_at: '2024-09-01'
-      },
-      {
-        id: '16',
-        company_id: 'company-1',
-        doc_type: 'outros',
-        doc_number: 'QSA-2023-001',
-        issuer: 'Cartório',
-        issue_date: '2024-09-05',
-        expires_at: '2025-09-27', // Expira em 15 dias
-        file_path: null,
-        notes: 'QSA',
-        version: 1,
-        created_at: '2024-09-05',
-        updated_at: '2024-09-05'
-      },
-      {
-        id: '17',
-        company_id: 'company-1',
-        doc_type: 'outros',
-        doc_number: 'SINTEGRA-2023-001',
-        issuer: 'Sefaz',
-        issue_date: '2024-09-10',
-        expires_at: '2025-09-30', // Expira em 18 dias (ainda válido, mas próximo)
-        file_path: null,
-        notes: 'SINTEGRA',
-        version: 1,
-        created_at: '2024-09-10',
-        updated_at: '2024-09-10'
-      },
-
-      // DOCUMENTOS VÁLIDOS (verde) - expiram em mais de 15 dias
-      {
-        id: '18',
-        company_id: 'company-1',
-        doc_type: 'outros',
-        doc_number: 'CERT-FAL-2023-001',
-        issuer: 'Tribunal',
-        issue_date: '2024-10-01',
-        expires_at: '2025-12-31', // Expira em 110 dias
-        file_path: null,
-        notes: 'Certidão de Falência',
-        version: 1,
-        created_at: '2024-10-01',
-        updated_at: '2024-10-01'
-      },
-      {
-        id: '19',
-        company_id: 'company-1',
-        doc_type: 'outros',
-        doc_number: 'BAL-2023-001',
-        issuer: 'Contador',
-        issue_date: '2024-01-01',
-        expires_at: '2025-12-31', // Expira em 110 dias
-        file_path: null,
-        notes: 'Balanço de 2023',
-        version: 1,
-        created_at: '2024-01-01',
-        updated_at: '2024-01-01'
-      },
-      {
-        id: '20',
-        company_id: 'company-1',
-        doc_type: 'outros',
-        doc_number: 'BAL-2024-001',
-        issuer: 'Contador',
-        issue_date: '2024-12-31',
-        expires_at: '2026-12-31', // Expira em 475 dias
-        file_path: null,
-        notes: 'Balanço 2024',
-        version: 1,
-        created_at: '2024-12-31',
-        updated_at: '2024-12-31'
-      },
-      {
-        id: '21',
-        company_id: 'company-1',
-        doc_type: 'outros',
-        doc_number: 'IND-2024-001',
-        issuer: 'Órgão Competente',
-        issue_date: '2024-11-01',
-        expires_at: '2025-11-01', // Expira em 50 dias
-        file_path: null,
-        notes: 'Índices Econômicos',
-        version: 1,
-        created_at: '2024-11-01',
-        updated_at: '2024-11-01'
-      },
-      {
-        id: '22',
-        company_id: 'company-1',
-        doc_type: 'cnpj',
-        doc_number: '12.345.678/0001-90',
-        issuer: 'Receita Federal',
-        issue_date: '2024-12-01',
-        expires_at: '2026-12-01', // Expira em 445 dias
-        file_path: null,
-        notes: 'CNPJ',
-        version: 2,
-        created_at: '2024-12-01',
-        updated_at: '2024-12-01'
-      },
-      {
-        id: '23',
-        company_id: 'company-1',
-        doc_type: 'certidao_fgts',
-        doc_number: 'CND-FED-2024-001',
-        issuer: 'Receita Federal',
-        issue_date: '2024-10-15',
-        expires_at: '2025-10-15', // Expira em 33 dias
-        file_path: null,
-        notes: 'CND Federal',
-        version: 1,
-        created_at: '2024-10-15',
-        updated_at: '2024-10-15'
-      },
-      {
-        id: '24',
-        company_id: 'company-1',
-        doc_type: 'certidao_inss',
-        doc_number: 'CND-EST-2024-001',
-        issuer: 'Sefaz',
-        issue_date: '2024-10-20',
-        expires_at: '2025-10-20', // Expira em 38 dias
-        file_path: null,
-        notes: 'CND Estadual',
-        version: 1,
-        created_at: '2024-10-20',
-        updated_at: '2024-10-20'
-      },
-      {
-        id: '25',
-        company_id: 'company-1',
-        doc_type: 'certidao_municipal',
-        doc_number: 'CND-MUN-2024-001',
-        issuer: 'Prefeitura',
-        issue_date: '2024-10-25',
-        expires_at: '2025-10-25', // Expira em 43 dias
-        file_path: null,
-        notes: 'CND Municipal',
-        version: 1,
-        created_at: '2024-10-25',
-        updated_at: '2024-10-25'
-      },
-      {
-        id: '26',
-        company_id: 'company-1',
-        doc_type: 'certidao_fgts',
-        doc_number: 'CND-FGTS-2024-001',
-        issuer: 'Caixa Econômica',
-        issue_date: '2024-11-01',
-        expires_at: '2025-11-01', // Expira em 50 dias
-        file_path: null,
-        notes: 'CND FGTS',
-        version: 1,
-        created_at: '2024-11-01',
-        updated_at: '2024-11-01'
-      },
-      {
-        id: '27',
-        company_id: 'company-1',
-        doc_type: 'certidao_trabalhista',
-        doc_number: 'CNDT-2024-001',
-        issuer: 'Ministério do Trabalho',
-        issue_date: '2024-11-05',
-        expires_at: '2025-11-05', // Expira em 54 dias
-        file_path: null,
-        notes: 'CNDT - Trabalhista',
-        version: 1,
-        created_at: '2024-11-05',
-        updated_at: '2024-11-05'
-      }
-    ];
+  private loadMissingDocuments() {
+    this.companyService.getMissingDocuments()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (documents) => {
+          this.missingDocuments = documents;
+        },
+        error: (error) => {
+          console.error('Load missing documents error:', error);
+        }
+      });
   }
 
   getDocumentsByStatus(status: 'valid' | 'warning' | 'expired'): CompanyDocument[] {
@@ -637,6 +457,65 @@ export class CompanyComponent implements OnInit, OnDestroy {
     });
   }
 
+  onUpdateDocument(doc: CompanyDocument) {
+    // TODO: Implementar modal de upload de documento
+    console.log('Atualizando documento:', doc);
+  }
+
+  // ===== MÉTODOS GETTER PARA FORMULÁRIOS =====
+  
+  getCompanyFormValue(key: string): any {
+    return (this.companyForm as any)[key] || '';
+  }
+
+  setCompanyFormValue(key: string, value: any): void {
+    (this.companyForm as any)[key] = value;
+  }
+
+  getMemberFormValue(key: string): any {
+    return (this.memberForm as any)[key] || '';
+  }
+
+  setMemberFormValue(key: string, value: any): void {
+    (this.memberForm as any)[key] = value;
+  }
+
+  onInputChange(key: string, event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.setCompanyFormValue(key, target.value);
+  }
+
+  onTextareaChange(key: string, event: Event): void {
+    const target = event.target as HTMLTextAreaElement;
+    this.setCompanyFormValue(key, target.value);
+  }
+
+  onSelectChange(key: string, event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    this.setMemberFormValue(key, target.value);
+  }
+
+  // ===== MÉTODOS UTILITÁRIOS =====
+  
+  private getDaysUntilExpiry(expiresAt: string): number {
+    const today = new Date();
+    const expiryDate = new Date(expiresAt);
+    const diffTime = expiryDate.getTime() - today.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  private isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  formatDate(date: string | null): string {
+    if (!date) return 'Não informado';
+    return new Date(date).toLocaleDateString('pt-BR');
+  }
+
+  // ===== MÉTODOS DE VALIDAÇÃO (para compatibilidade com HTML) =====
+  
   getValidDocumentsCount(): number {
     return this.getDocumentsByStatus('valid').length;
   }
@@ -647,72 +526,5 @@ export class CompanyComponent implements OnInit, OnDestroy {
 
   getExpiredDocumentsCount(): number {
     return this.getDocumentsByStatus('expired').length;
-  }
-
-  private getDaysUntilExpiry(expiresAt: string): number {
-    const today = new Date();
-    const expiryDate = new Date(expiresAt);
-    const diffTime = expiryDate.getTime() - today.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  }
-
-  getDocumentTypeLabel(docType: string): string {
-    const labels: { [key: string]: string } = {
-      'cnpj': 'CNPJ',
-      'inscricao_estadual': 'Inscrição Estadual',
-      'inscricao_municipal': 'Inscrição Municipal',
-      'alvara': 'Alvará de Funcionamento',
-      'contrato_social': 'Contrato Social',
-      'certificado_digital': 'Certificado Digital',
-      'licenca_ambiental': 'Licença Ambiental',
-      'certidao_fgts': 'Certidão FGTS',
-      'certidao_inss': 'Certidão INSS',
-      'certidao_trabalhista': 'Certidão Trabalhista',
-      'certidao_municipal': 'Certidão Municipal',
-      'outros': 'Outros'
-    };
-    return labels[docType] || docType;
-  }
-
-  getDocumentStatusClass(doc: CompanyDocument): string {
-    const daysUntilExpiry = this.getDaysUntilExpiry(doc.expires_at);
-    if (daysUntilExpiry <= 0) {
-      return 'bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200';
-    } else if (daysUntilExpiry <= 15) {
-      return 'bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200';
-    } else {
-      return 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200';
-    }
-  }
-
-  getDocumentStatusText(doc: CompanyDocument): string {
-    const daysUntilExpiry = this.getDaysUntilExpiry(doc.expires_at);
-    if (daysUntilExpiry <= 0) {
-      return 'Expirado';
-    } else if (daysUntilExpiry <= 15) {
-      return `${daysUntilExpiry} dias`;
-    } else {
-      return 'Válido';
-    }
-  }
-
-  formatDate(date: string | null): string {
-    if (!date) return 'Não informado';
-    return new Date(date).toLocaleDateString('pt-BR');
-  }
-
-  updateDocument(doc: CompanyDocument) {
-    console.log('[Company] Atualizando documento:', doc);
-    
-    // TODO: Implementar lógica de upload de documento
-    // Por enquanto, apenas mostra um alerta
-    alert(`Atualizando documento: ${doc.notes}\n\nEsta funcionalidade será implementada em breve.`);
-    
-    // Aqui você pode implementar:
-    // 1. Abrir modal de upload
-    // 2. Selecionar arquivo
-    // 3. Fazer upload para o servidor
-    // 4. Atualizar o documento no banco
-    // 5. Recarregar a lista de documentos
   }
 }

@@ -199,3 +199,142 @@ table tbody tr:hover {
 .dark .overflow-x-auto::-webkit-scrollbar-thumb:hover {
   background: #4ade80;
 }
+
+/* Form field styles */
+.field-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.dark .field-label {
+  color: #d1d5db;
+}
+
+.field-value {
+  color: #111827;
+}
+
+.dark .field-value {
+  color: #ffffff;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.field-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  background-color: #ffffff;
+  color: #111827;
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.field-input:focus {
+  outline: none;
+  border-color: #4ade80;
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.2);
+}
+
+.dark .field-input {
+  background-color: #374151;
+  border-color: #4b5563;
+  color: #ffffff;
+}
+
+.dark .field-input:focus {
+  border-color: #4ade80;
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.2);
+}
+
+.btn-primary {
+  padding: 0.5rem 1rem;
+  background-color: #4ade80;
+  color: #ffffff;
+  border-radius: 0.5rem;
+  border: none;
+  transition: background-color 0.2s ease-in-out;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #22c55e;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  border-radius: 0.5rem;
+  background-color: transparent;
+  transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+}
+
+.btn-secondary:hover {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.dark .btn-secondary {
+  border-color: #4b5563;
+  color: #d1d5db;
+}
+
+.dark .btn-secondary:hover {
+  background-color: #374151;
+  border-color: #6b7280;
+}
+
+.tab-active {
+  border-color: #4ade80;
+  color: #22c55e;
+}
+
+.tab-inactive {
+  border-color: transparent;
+  color: #6b7280;
+}
+
+.tab-inactive:hover {
+  color: #22c55e;
+  border-color: #bbf7d0;
+}
+
+.dark .tab-active {
+  color: #4ade80;
+}
+
+.dark .tab-inactive {
+  color: #9ca3af;
+}
+
+.dark .tab-inactive:hover {
+  color: #4ade80;
+  border-color: #14532d;
+}

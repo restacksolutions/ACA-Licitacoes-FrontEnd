@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { delay } from 'rxjs/operators';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, throwError, of } from 'rxjs';
+import { delay, catchError, map } from 'rxjs/operators';
 
-// Interfaces baseadas no schema SQL
+// ===== INTERFACES =====
+
 export interface Company {
   id: string;
   name: string;
@@ -77,23 +79,52 @@ export interface DocumentUpdateData {
   notes?: string;
 }
 
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+export interface ApiError {
+  success: false;
+  error: string;
+  details?: any;
+}
+
+// ===== SERVICE =====
+
 @Injectable({
   providedIn: 'root'
 })
 export class CompanyService {
+  private readonly apiUrl = 'http://localhost:3000/api'; // TODO: Mover para environment quando disponível
+  private readonly companyEndpoint = `${this.apiUrl}/company`;
+  private readonly membersEndpoint = `${this.apiUrl}/company/members`;
+  private readonly documentsEndpoint = `${this.apiUrl}/company/documents`;
 
-  constructor() { }
+  constructor(private http: HttpClient) { }
 
-  // ===== COMPANY METHODS =====
+  // ===== MÉTODOS DA EMPRESA =====
   
   getCompanyInfo(): Observable<Company> {
-    // TODO: Implementar chamada real para API
+    // TODO: Implementar chamada real para API quando o backend estiver pronto
+    // return this.http.get<ApiResponse<Company>>(`${this.companyEndpoint}`)
+    //   .pipe(
+    //     map(response => response.data),
+    //     catchError(this.handleError)
+    //   );
+
+    // Mock data para desenvolvimento
     const mockCompany: Company = {
       id: '1',
-      name: 'Empresa Exemplo Ltda',
+      name: 'ACA Licitações',
       cnpj: '12.345.678/0001-90',
+      legal_name: 'ACA Licitações Ltda',
+      state_registration: '123.456.789.012',
+      municipal_registration: '123456789',
       phone: '(11) 99999-9999',
       address: 'Rua das Flores, 123 - Centro - São Paulo/SP - 01234-567',
+      email: 'contato@empresaexemplo.com.br',
       logo_path: '/assets/images/company-logo.png',
       letterhead_path: '/assets/images/company-letterhead.png',
       active: true,
@@ -105,27 +136,59 @@ export class CompanyService {
   }
 
   updateCompanyInfo(data: CompanyUpdateData): Observable<Company> {
-    // TODO: Implementar chamada real para API
+    // TODO: Implementar chamada real para API quando o backend estiver pronto
+    // return this.http.put<ApiResponse<Company>>(`${this.companyEndpoint}`, data)
+    //   .pipe(
+    //     map(response => response.data),
+    //     catchError(this.handleError)
+    //   );
+
+    // Mock data para desenvolvimento
     console.log('Atualizando informações da empresa:', data);
     return this.getCompanyInfo();
   }
 
   uploadCompanyLogo(file: File): Observable<{ logo_path: string }> {
-    // TODO: Implementar upload real para API
+    // TODO: Implementar upload real para API quando o backend estiver pronto
+    // const formData = new FormData();
+    // formData.append('logo', file);
+    // return this.http.post<ApiResponse<{ logo_path: string }>>(`${this.companyEndpoint}/logo`, formData)
+    //   .pipe(
+    //     map(response => response.data),
+    //     catchError(this.handleError)
+    //   );
+
+    // Mock data para desenvolvimento
     console.log('Fazendo upload do logo:', file.name);
-    return of({ logo_path: '/assets/images/new-logo.png' }).pipe(delay(1000));
+    return of({ logo_path: `/uploads/logo-${Date.now()}.${file.name.split('.').pop()}` }).pipe(delay(1000));
   }
 
   uploadCompanyLetterhead(file: File): Observable<{ letterhead_path: string }> {
-    // TODO: Implementar upload real para API
+    // TODO: Implementar upload real para API quando o backend estiver pronto
+    // const formData = new FormData();
+    // formData.append('letterhead', file);
+    // return this.http.post<ApiResponse<{ letterhead_path: string }>>(`${this.companyEndpoint}/letterhead`, formData)
+    //   .pipe(
+    //     map(response => response.data),
+    //     catchError(this.handleError)
+    //   );
+
+    // Mock data para desenvolvimento
     console.log('Fazendo upload do papel timbrado:', file.name);
-    return of({ letterhead_path: '/assets/images/new-letterhead.png' }).pipe(delay(1000));
+    return of({ letterhead_path: `/uploads/letterhead-${Date.now()}.${file.name.split('.').pop()}` }).pipe(delay(1000));
   }
 
-  // ===== MEMBERS METHODS =====
+  // ===== MÉTODOS DE FUNCIONÁRIOS =====
 
   getCompanyMembers(): Observable<CompanyMember[]> {
-    // TODO: Implementar chamada real para API
+    // TODO: Implementar chamada real para API quando o backend estiver pronto
+    // return this.http.get<ApiResponse<CompanyMember[]>>(`${this.membersEndpoint}`)
+    //   .pipe(
+    //     map(response => response.data),
+    //     catchError(this.handleError)
+    //   );
+
+    // Mock data para desenvolvimento
     const mockMembers: CompanyMember[] = [
       {
         id: '1',
@@ -175,18 +238,25 @@ export class CompanyService {
   }
 
   addMember(email: string, role: 'admin' | 'member'): Observable<CompanyMember> {
-    // TODO: Implementar chamada real para API
+    // TODO: Implementar chamada real para API quando o backend estiver pronto
+    // return this.http.post<ApiResponse<CompanyMember>>(`${this.membersEndpoint}`, { email, role })
+    //   .pipe(
+    //     map(response => response.data),
+    //     catchError(this.handleError)
+    //   );
+
+    // Mock data para desenvolvimento
     console.log('Adicionando membro:', { email, role });
     const newMember: CompanyMember = {
-      id: 'new-member-id',
+      id: `member-${Date.now()}`,
       company_id: '1',
-      user_id: 'new-user-id',
+      user_id: `user-${Date.now()}`,
       role,
       name: 'Novo Usuário',
       email,
       created_at: new Date().toISOString(),
       user: {
-        id: 'new-user-id',
+        id: `user-${Date.now()}`,
         full_name: 'Novo Usuário',
         email
       }
@@ -195,7 +265,14 @@ export class CompanyService {
   }
 
   updateMemberRole(memberId: string, role: 'admin' | 'member'): Observable<CompanyMember> {
-    // TODO: Implementar chamada real para API
+    // TODO: Implementar chamada real para API quando o backend estiver pronto
+    // return this.http.put<ApiResponse<CompanyMember>>(`${this.membersEndpoint}/${memberId}`, { role })
+    //   .pipe(
+    //     map(response => response.data),
+    //     catchError(this.handleError)
+    //   );
+
+    // Mock data para desenvolvimento
     console.log('Atualizando role do membro:', { memberId, role });
     const mockUpdatedMember: CompanyMember = {
       id: memberId,
@@ -215,15 +292,29 @@ export class CompanyService {
   }
 
   removeMember(memberId: string): Observable<{ success: boolean }> {
-    // TODO: Implementar chamada real para API
+    // TODO: Implementar chamada real para API quando o backend estiver pronto
+    // return this.http.delete<ApiResponse<{ success: boolean }>>(`${this.membersEndpoint}/${memberId}`)
+    //   .pipe(
+    //     map(response => response.data),
+    //     catchError(this.handleError)
+    //   );
+
+    // Mock data para desenvolvimento
     console.log('Removendo membro:', memberId);
     return of({ success: true }).pipe(delay(500));
   }
 
-  // ===== DOCUMENTS METHODS =====
+  // ===== MÉTODOS DE DOCUMENTOS =====
 
   getCompanyDocuments(): Observable<CompanyDocument[]> {
-    // TODO: Implementar chamada real para API
+    // TODO: Implementar chamada real para API quando o backend estiver pronto
+    // return this.http.get<ApiResponse<CompanyDocument[]>>(`${this.documentsEndpoint}`)
+    //   .pipe(
+    //     map(response => response.data),
+    //     catchError(this.handleError)
+    //   );
+
+    // Mock data para desenvolvimento
     const mockDocuments: CompanyDocument[] = [
       {
         id: '1',
@@ -273,301 +364,101 @@ export class CompanyService {
   }
 
   getMissingDocuments(): Observable<CompanyDocument[]> {
-    // TODO: Implementar chamada real para API
+    // TODO: Implementar chamada real para API quando o backend estiver pronto
+    // return this.http.get<ApiResponse<CompanyDocument[]>>(`${this.documentsEndpoint}/missing`)
+    //   .pipe(
+    //     map(response => response.data),
+    //     catchError(this.handleError)
+    //   );
+
+    // Mock data para desenvolvimento - documentos com datas variadas
     const mockMissingDocuments: CompanyDocument[] = [
+      // DOCUMENTOS EXPIRADOS (vermelho) - expirados há mais de 1 dia
       {
         id: '1',
-        company_id: '1',
-        doc_type: 'outros',
-        doc_number: 'ACT-2024-001',
-        issuer: 'Órgão Competente',
-        issue_date: null,
-        expires_at: '2024-12-31',
-        file_path: null,
-        notes: 'Atestado de Capacidade Técnica',
-        version: 0,
-        created_at: null,
-        updated_at: null
-      },
-      {
-        id: '2',
-        company_id: '1',
-        doc_type: 'outros',
-        doc_number: 'CNH-SOCIO-001',
-        issuer: 'DETRAN',
-        issue_date: null,
-        expires_at: '2025-06-15',
-        file_path: null,
-        notes: 'CNH Sócio',
-        version: 0,
-        created_at: null,
-        updated_at: null
-      },
-      {
-        id: '3',
-        company_id: '1',
-        doc_type: 'outros',
-        doc_number: 'CNH-PROC-001',
-        issuer: 'DETRAN',
-        issue_date: null,
-        expires_at: '2025-08-20',
-        file_path: null,
-        notes: 'CNH Procurador',
-        version: 0,
-        created_at: null,
-        updated_at: null
-      },
-      {
-        id: '4',
-        company_id: '1',
-        doc_type: 'outros',
-        doc_number: 'PROC-2024-001',
-        issuer: 'Cartório',
-        issue_date: null,
-        expires_at: '2024-11-30',
-        file_path: null,
-        notes: 'Procuração',
-        version: 0,
-        created_at: null,
-        updated_at: null
-      },
-      {
-        id: '5',
-        company_id: '1',
-        doc_type: 'contrato_social',
-        doc_number: 'CS-2024-001',
-        issuer: 'Cartório',
-        issue_date: null,
-        expires_at: '2025-01-15',
-        file_path: null,
-        notes: 'Contrato Social',
-        version: 0,
-        created_at: null,
-        updated_at: null
-      },
-      {
-        id: '6',
-        company_id: '1',
-        doc_type: 'outros',
-        doc_number: 'CERT-SIMP-001',
-        issuer: 'Receita Federal',
-        issue_date: null,
-        expires_at: '2024-10-10',
-        file_path: null,
-        notes: 'Certidão Simplificada',
-        version: 0,
-        created_at: null,
-        updated_at: null
-      },
-      {
-        id: '7',
-        company_id: '1',
-        doc_type: 'outros',
-        doc_number: 'CICAD-2024-001',
-        issuer: 'CICAD',
-        issue_date: null,
-        expires_at: '2024-09-25',
-        file_path: null,
-        notes: 'CICAD',
-        version: 0,
-        created_at: null,
-        updated_at: null
-      },
-      {
-        id: '8',
-        company_id: '1',
-        doc_type: 'inscricao_municipal',
-        doc_number: 'IM-2024-001',
-        issuer: 'Prefeitura Municipal',
-        issue_date: null,
-        expires_at: '2024-12-15',
-        file_path: null,
-        notes: 'Inscrição Municipal',
-        version: 0,
-        created_at: null,
-        updated_at: null
-      },
-      {
-        id: '9',
-        company_id: '1',
-        doc_type: 'alvara',
-        doc_number: 'AF-2024-001',
-        issuer: 'Prefeitura Municipal',
-        issue_date: null,
-        expires_at: '2024-11-20',
-        file_path: null,
-        notes: 'Alvará de Funcionamento',
-        version: 0,
-        created_at: null,
-        updated_at: null
-      },
-      {
-        id: '10',
-        company_id: '1',
-        doc_type: 'outros',
-        doc_number: 'QSA-2024-001',
-        issuer: 'Cartório',
-        issue_date: null,
-        expires_at: '2025-02-28',
-        file_path: null,
-        notes: 'QSA',
-        version: 0,
-        created_at: null,
-        updated_at: null
-      },
-      {
-        id: '11',
-        company_id: '1',
-        doc_type: 'outros',
-        doc_number: 'SINTEGRA-2024-001',
-        issuer: 'Sefaz',
-        issue_date: null,
-        expires_at: '2024-08-30',
-        file_path: null,
-        notes: 'SINTEGRA',
-        version: 0,
-        created_at: null,
-        updated_at: null
-      },
-      {
-        id: '12',
-        company_id: '1',
-        doc_type: 'outros',
-        doc_number: 'CERT-FAL-001',
-        issuer: 'Tribunal de Justiça',
-        issue_date: null,
-        expires_at: '2024-12-31',
-        file_path: null,
-        notes: 'Certidão de Falência',
-        version: 0,
-        created_at: null,
-        updated_at: null
-      },
-      {
-        id: '13',
-        company_id: '1',
-        doc_type: 'outros',
-        doc_number: 'BAL-2023-001',
-        issuer: 'Contador',
-        issue_date: null,
-        expires_at: '2024-12-31',
-        file_path: null,
-        notes: 'Balanço de 2023',
-        version: 0,
-        created_at: null,
-        updated_at: null
-      },
-      {
-        id: '14',
-        company_id: '1',
-        doc_type: 'outros',
-        doc_number: 'BAL-2024-001',
-        issuer: 'Contador',
-        issue_date: null,
-        expires_at: '2025-03-31',
-        file_path: null,
-        notes: 'Balanço 2024',
-        version: 0,
-        created_at: null,
-        updated_at: null
-      },
-      {
-        id: '15',
-        company_id: '1',
-        doc_type: 'outros',
-        doc_number: 'IND-ECON-001',
-        issuer: 'Órgão Competente',
-        issue_date: null,
-        expires_at: '2024-10-15',
-        file_path: null,
-        notes: 'Índices Econômicos',
-        version: 0,
-        created_at: null,
-        updated_at: null
-      },
-      {
-        id: '16',
-        company_id: '1',
+        company_id: 'company-1',
         doc_type: 'cnpj',
         doc_number: '12.345.678/0001-90',
         issuer: 'Receita Federal',
-        issue_date: null,
-        expires_at: '2025-01-01',
+        issue_date: '2023-01-15',
+        expires_at: '2024-12-31', // Expirado há 255 dias
         file_path: null,
         notes: 'CNPJ',
-        version: 0,
-        created_at: null,
-        updated_at: null
+        version: 1,
+        created_at: '2023-01-15',
+        updated_at: '2023-01-15'
       },
       {
-        id: '17',
-        company_id: '1',
-        doc_type: 'outros',
-        doc_number: 'CND-FED-001',
-        issuer: 'Receita Federal',
-        issue_date: null,
-        expires_at: '2024-09-10',
+        id: '2',
+        company_id: 'company-1',
+        doc_type: 'inscricao_estadual',
+        doc_number: '123456789',
+        issuer: 'Sefaz',
+        issue_date: '2023-02-01',
+        expires_at: '2024-12-31', // Expirado há 255 dias
         file_path: null,
-        notes: 'CND Federal',
-        version: 0,
-        created_at: null,
-        updated_at: null
+        notes: 'Inscrição Estadual',
+        version: 1,
+        created_at: '2023-02-01',
+        updated_at: '2023-02-01'
       },
+      // DOCUMENTOS COM AVISO (amarelo) - expiram em 1-15 dias
+      {
+        id: '13',
+        company_id: 'company-1',
+        doc_type: 'outros',
+        doc_number: 'CICAD-2023-001',
+        issuer: 'Órgão Competente',
+        issue_date: '2024-08-15',
+        expires_at: '2025-09-15', // Expira em 3 dias
+        file_path: null,
+        notes: 'CICAD',
+        version: 1,
+        created_at: '2024-08-15',
+        updated_at: '2024-08-15'
+      },
+      {
+        id: '14',
+        company_id: 'company-1',
+        doc_type: 'inscricao_municipal',
+        doc_number: 'IM-2023-001',
+        issuer: 'Prefeitura',
+        issue_date: '2024-08-20',
+        expires_at: '2025-09-20', // Expira em 8 dias
+        file_path: null,
+        notes: 'Inscrição Municipal',
+        version: 1,
+        created_at: '2024-08-20',
+        updated_at: '2024-08-20'
+      },
+      // DOCUMENTOS VÁLIDOS (verde) - expiram em mais de 15 dias
       {
         id: '18',
-        company_id: '1',
+        company_id: 'company-1',
         doc_type: 'outros',
-        doc_number: 'CND-EST-001',
-        issuer: 'Sefaz',
-        issue_date: null,
-        expires_at: '2026-08-25',
+        doc_number: 'CERT-FAL-2023-001',
+        issuer: 'Tribunal',
+        issue_date: '2024-10-01',
+        expires_at: '2025-12-31', // Expira em 110 dias
         file_path: null,
-        notes: 'CND Estadual',
-        version: 0,
-        created_at: null,
-        updated_at: null
+        notes: 'Certidão de Falência',
+        version: 1,
+        created_at: '2024-10-01',
+        updated_at: '2024-10-01'
       },
       {
         id: '19',
-        company_id: '1',
+        company_id: 'company-1',
         doc_type: 'outros',
-        doc_number: 'CND-MUN-001',
-        issuer: 'Prefeitura Municipal',
-        issue_date: null,
-        expires_at: '2025-09-20',
+        doc_number: 'BAL-2023-001',
+        issuer: 'Contador',
+        issue_date: '2024-01-01',
+        expires_at: '2025-12-31', // Expira em 110 dias
         file_path: null,
-        notes: 'CND Municipal',
-        version: 0,
-        created_at: null,
-        updated_at: null
-      },
-      {
-        id: '20',
-        company_id: '1',
-        doc_type: 'outros',
-        doc_number: 'CND-FGTS-001',
-        issuer: 'Caixa Econômica Federal',
-        issue_date: null,
-        expires_at: '2024-06-15',
-        file_path: null,
-        notes: 'CND FGTS',
-        version: 0,
-        created_at: null,
-        updated_at: null
-      },
-      {
-        id: '21',
-        company_id: '1',
-        doc_type: 'outros',
-        doc_number: 'CNDT-001',
-        issuer: 'Ministério do Trabalho',
-        issue_date: null,
-        expires_at: '2024-05-30',
-        file_path: null,
-        notes: 'CNDT - Trabalhista',
-        version: 0,
-        created_at: null,
-        updated_at: null
+        notes: 'Balanço de 2023',
+        version: 1,
+        created_at: '2024-01-01',
+        updated_at: '2024-01-01'
       }
     ];
 
@@ -575,10 +466,20 @@ export class CompanyService {
   }
 
   uploadDocument(file: File, documentData: DocumentUpdateData): Observable<CompanyDocument> {
-    // TODO: Implementar upload real para API
+    // TODO: Implementar upload real para API quando o backend estiver pronto
+    // const formData = new FormData();
+    // formData.append('file', file);
+    // formData.append('data', JSON.stringify(documentData));
+    // return this.http.post<ApiResponse<CompanyDocument>>(`${this.documentsEndpoint}/upload`, formData)
+    //   .pipe(
+    //     map(response => response.data),
+    //     catchError(this.handleError)
+    //   );
+
+    // Mock data para desenvolvimento
     console.log('Fazendo upload de documento:', { fileName: file.name, documentData });
     const newDocument: CompanyDocument = {
-      id: 'new-doc-id',
+      id: `doc-${Date.now()}`,
       company_id: '1',
       doc_type: documentData.doc_type as any,
       doc_number: documentData.doc_number || '',
@@ -595,7 +496,14 @@ export class CompanyService {
   }
 
   updateDocument(documentId: string, data: DocumentUpdateData): Observable<CompanyDocument> {
-    // TODO: Implementar chamada real para API
+    // TODO: Implementar chamada real para API quando o backend estiver pronto
+    // return this.http.put<ApiResponse<CompanyDocument>>(`${this.documentsEndpoint}/${documentId}`, data)
+    //   .pipe(
+    //     map(response => response.data),
+    //     catchError(this.handleError)
+    //   );
+
+    // Mock data para desenvolvimento
     console.log('Atualizando documento:', { documentId, data });
     const mockUpdatedDocument: CompanyDocument = {
       id: documentId,
@@ -615,19 +523,32 @@ export class CompanyService {
   }
 
   deleteDocument(documentId: string): Observable<{ success: boolean }> {
-    // TODO: Implementar chamada real para API
+    // TODO: Implementar chamada real para API quando o backend estiver pronto
+    // return this.http.delete<ApiResponse<{ success: boolean }>>(`${this.documentsEndpoint}/${documentId}`)
+    //   .pipe(
+    //     map(response => response.data),
+    //     catchError(this.handleError)
+    //   );
+
+    // Mock data para desenvolvimento
     console.log('Deletando documento:', documentId);
     return of({ success: true }).pipe(delay(500));
   }
 
   downloadDocument(documentId: string): Observable<Blob> {
-    // TODO: Implementar download real para API
+    // TODO: Implementar download real para API quando o backend estiver pronto
+    // return this.http.get(`${this.documentsEndpoint}/${documentId}/download`, { responseType: 'blob' })
+    //   .pipe(
+    //     catchError(this.handleError)
+    //   );
+
+    // Mock data para desenvolvimento
     console.log('Baixando documento:', documentId);
     const mockBlob = new Blob(['Conteúdo do documento'], { type: 'application/pdf' });
     return of(mockBlob).pipe(delay(500));
   }
 
-  // ===== UTILITY METHODS =====
+  // ===== MÉTODOS UTILITÁRIOS =====
 
   getDocumentTypeLabel(docType: string): string {
     const labels: { [key: string]: string } = {
@@ -637,6 +558,11 @@ export class CompanyService {
       'alvara': 'Alvará',
       'contrato_social': 'Contrato Social',
       'certificado_digital': 'Certificado Digital',
+      'licenca_ambiental': 'Licença Ambiental',
+      'certidao_fgts': 'Certidão FGTS',
+      'certidao_inss': 'Certidão INSS',
+      'certidao_trabalhista': 'Certidão Trabalhista',
+      'certidao_municipal': 'Certidão Municipal',
       'outros': 'Outros'
     };
     return labels[docType] || docType;
@@ -662,5 +588,46 @@ export class CompanyService {
     const expirationDate = new Date(expiresAt);
     const today = new Date();
     return expirationDate < today;
+  }
+
+  // ===== TRATAMENTO DE ERROS =====
+
+  private handleError(error: HttpErrorResponse): Observable<never> {
+    let errorMessage = 'Ocorreu um erro inesperado';
+    
+    if (error.error instanceof ErrorEvent) {
+      // Erro do cliente
+      errorMessage = `Erro: ${error.error.message}`;
+    } else {
+      // Erro do servidor
+      switch (error.status) {
+        case 400:
+          errorMessage = 'Dados inválidos fornecidos';
+          break;
+        case 401:
+          errorMessage = 'Não autorizado. Faça login novamente';
+          break;
+        case 403:
+          errorMessage = 'Acesso negado';
+          break;
+        case 404:
+          errorMessage = 'Recurso não encontrado';
+          break;
+        case 409:
+          errorMessage = 'Conflito: O recurso já existe';
+          break;
+        case 422:
+          errorMessage = 'Dados de entrada inválidos';
+          break;
+        case 500:
+          errorMessage = 'Erro interno do servidor';
+          break;
+        default:
+          errorMessage = `Erro ${error.status}: ${error.message}`;
+      }
+    }
+
+    console.error('API Error:', error);
+    return throwError(() => new Error(errorMessage));
   }
 }
