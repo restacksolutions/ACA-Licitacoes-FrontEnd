@@ -27,26 +27,10 @@ export interface RegisterRequest {
 
 export interface AuthResponse {
   access_token: string;
-  access_expires_at: string;
-  refresh_token: string;
-  refresh_expires_at: string;
-  user: {
-    id: string;
-    fullName: string;
-    email: string;
-    createdAt: string;
-  };
-  company: {
-    id: string;
-    name: string;
-    cnpj: string;
-    active: boolean;
-    createdAt: string;
-  };
-  membership: {
-    id: string;
-    role: string;
-  };
+  expires_at: string;
+  email: string;
+  user_id: string;
+  company_id?: string; // Opcional para cadastro
 }
 
 @Injectable({
@@ -89,37 +73,48 @@ export class ApiService {
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {
+    console.error('🚨 [ApiService.handleError] ===== TRATANDO ERRO =====');
+    console.error('📊 Status:', error.status);
+    console.error('📝 Message:', error.message);
+    console.error('📦 Error body:', error.error);
+    
     let errorMessage = 'Erro desconhecido';
     
     if (error.error instanceof ErrorEvent) {
       // Erro do cliente
-      errorMessage = `Erro: ${error.error.message}`;
+      errorMessage = `Erro de rede: ${error.error.message}`;
     } else {
-      // Erro do servidor
-      switch (error.status) {
-        case 400:
-          errorMessage = 'Dados inválidos';
-          break;
-        case 401:
-          errorMessage = 'Não autorizado';
-          break;
-        case 403:
-          errorMessage = 'Acesso negado';
-          break;
-        case 404:
-          errorMessage = 'Recurso não encontrado';
-          break;
-        case 409:
-          errorMessage = 'Conflito (email/CNPJ já existe)';
-          break;
-        case 500:
-          errorMessage = 'Erro interno do servidor';
-          break;
-        default:
-          errorMessage = `Erro ${error.status}: ${error.message}`;
+      // Erro do servidor - verificar se tem mensagem personalizada
+      if (error.error && error.error.message) {
+        errorMessage = error.error.message;
+      } else {
+        // Usar mensagens padrão baseadas no status
+        switch (error.status) {
+          case 400:
+            errorMessage = 'Dados inválidos';
+            break;
+          case 401:
+            errorMessage = 'Não autorizado';
+            break;
+          case 403:
+            errorMessage = 'Acesso negado';
+            break;
+          case 404:
+            errorMessage = 'Recurso não encontrado';
+            break;
+          case 409:
+            errorMessage = 'Conflito (email/CNPJ já existe)';
+            break;
+          case 500:
+            errorMessage = 'Erro interno do servidor';
+            break;
+          default:
+            errorMessage = `Erro ${error.status}: ${error.message}`;
+        }
       }
     }
 
+    console.error('📤 [ApiService.handleError] Mensagem de erro final:', errorMessage);
     return throwError(() => new Error(errorMessage));
   }
 
@@ -145,9 +140,9 @@ export class ApiService {
           console.log('✅ [ApiService.login] ===== RESPOSTA RECEBIDA =====');
           console.log('📊 Status da resposta:', response);
           console.log('🔑 Access Token:', response.access_token ? 'Presente' : 'Ausente');
-          console.log('🔄 Refresh Token:', response.refresh_token ? 'Presente' : 'Ausente');
-          console.log('👤 User:', response.user);
-          this.setTokens(response.access_token, response.refresh_token);
+          console.log('🔄 Refresh Token:', 'Usando access_token como refresh');
+          console.log('👤 User ID:', response.user_id);
+          this.setTokens(response.access_token, response.access_token); // Usar access_token como refresh também
           console.log('💾 Tokens salvos no localStorage');
         }),
         catchError(error => {
@@ -175,7 +170,7 @@ export class ApiService {
       .pipe(
         tap(response => {
           console.log('[ApiService.register] Resposta recebida:', response);
-          this.setTokens(response.access_token, response.refresh_token);
+          this.setTokens(response.access_token, response.access_token); // Usar access_token como refresh também
         }),
         catchError(error => {
           console.error('[ApiService.register] Erro na requisição:', error);
@@ -212,8 +207,33 @@ export class ApiService {
   }
 
   updateCompany(companyId: string, companyData: any): Observable<any> {
+    console.log('[ApiService.updateCompany] ===== ATUALIZANDO EMPRESA =====');
+    console.log('[ApiService.updateCompany] CompanyId recebido:', companyId);
+    console.log('[ApiService.updateCompany] Tipo do companyId:', typeof companyId);
+    console.log('[ApiService.updateCompany] CompanyData:', companyData);
+    console.log('[ApiService.updateCompany] URL da requisição:', `${this.apiBaseUrl}/companies/${companyId}`);
+    console.log('[ApiService.updateCompany] Headers da requisição:', this.getHeaders());
+    
+    if (!companyId) {
+      console.error('[ApiService.updateCompany] ERRO: companyId é undefined ou null');
+      throw new Error('ID da empresa é obrigatório');
+    }
+    
+    // NÃO incluir companyId no body - ele deve vir apenas da URL
+    // O DTO UpdateCompanyDto não espera o campo companyId
+    console.log('[ApiService.updateCompany] Dados da requisição (sem companyId no body):', companyData);
+    console.log('[ApiService.updateCompany] Fazendo requisição PATCH...');
+    
     return this.http.patch(`${this.apiBaseUrl}/companies/${companyId}`, companyData, { headers: this.getHeaders() })
-      .pipe(catchError(this.handleError));
+      .pipe(
+        tap(response => {
+          console.log('[ApiService.updateCompany] Resposta recebida:', response);
+        }),
+        catchError(error => {
+          console.error('[ApiService.updateCompany] Erro na requisição:', error);
+          return this.handleError(error);
+        })
+      );
   }
 
   // Métodos de membros

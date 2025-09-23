@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste de Fluxo de Autenticação</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        input, textarea { width: 300px; padding: 5px; margin: 5px; }
+        .result { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste de Fluxo de Autenticação Frontend/Backend</h1>
+    
+    <div class="test-section">
+        <h2>1. Teste de Login</h2>
+        <input type="email" id="loginEmail" placeholder="Email" value="test@test.com">
+        <input type="password" id="loginPassword" placeholder="Senha" value="123456">
+        <button onclick="testLogin()">Testar Login</button>
+        <div id="loginResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Teste de Cadastro</h2>
+        <input type="text" id="signupName" placeholder="Nome Completo" value="João Silva">
+        <input type="email" id="signupEmail" placeholder="Email" value="joao@test.com">
+        <input type="password" id="signupPassword" placeholder="Senha" value="123456">
+        <input type="text" id="signupCompany" placeholder="Nome da Empresa" value="Empresa Teste">
+        <input type="text" id="signupCnpj" placeholder="CNPJ" value="12.345.678/0001-90">
+        <button onclick="testSignup()">Testar Cadastro</button>
+        <div id="signupResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Teste de Endpoint Protegido</h2>
+        <button onclick="testProtectedEndpoint()">Testar /users/me</button>
+        <button onclick="testCompanies()">Testar /companies</button>
+        <div id="protectedResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Debug de Estado</h2>
+        <button onclick="debugState()">Debug Estado</button>
+        <button onclick="clearStorage()">Limpar Storage</button>
+        <div id="debugResult" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/v1';
+        
+        async function testLogin() {
+            const resultDiv = document.getElementById('loginResult');
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            resultDiv.innerHTML = '<div class="info">Testando login...</div>';
+            
+            try {
+                console.log('🔐 Testando login:', { email, password: '***' });
+                
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                console.log('📊 Resposta do login:', data);
+                
+                if (response.ok) {
+                    // Salvar tokens
+                    localStorage.setItem('access_token', data.access_token);
+                    localStorage.setItem('refresh_token', data.refresh_token);
+                    
+                    // Salvar dados do usuário
+                    const user = {
+                        id: data.user.id,
+                        email: data.user.email,
+                        name: data.user.fullName,
+                        role: data.membership.role,
+                        company_id: data.company.id,
+                        created_at: data.user.createdAt
+                    };
+                    localStorage.setItem('current_user', JSON.stringify(user));
+                    
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Login bem-sucedido!</div>
+                        <div>Token: ${data.access_token.substring(0, 20)}...</div>
+                        <div>User: ${data.user.fullName}</div>
+                        <div>Company: ${data.company.name}</div>
+                        <div>Role: ${data.membership.role}</div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Erro: ${data.message || 'Erro desconhecido'}</div>`;
+                }
+            } catch (error) {
+                console.error('❌ Erro no login:', error);
+                resultDiv.innerHTML = `<div class="error">❌ Erro de rede: ${error.message}</div>`;
+            }
+        }
+        
+        async function testSignup() {
+            const resultDiv = document.getElementById('signupResult');
+            const name = document.getElementById('signupName').value;
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            const companyName = document.getElementById('signupCompany').value;
+            const cnpj = document.getElementById('signupCnpj').value;
+            
+            resultDiv.innerHTML = '<div class="info">Testando cadastro...</div>';
+            
+            try {
+                console.log('📝 Testando cadastro:', { name, email, companyName, cnpj, password: '***' });
+                
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        fullName: name,
+                        email: email,
+                        password: password,
+                        companyName: companyName,
+                        companyCnpj: cnpj,
+                        companyPhone: '',
+                        companyAddress: ''
+                    })
+                });
+                
+                const data = await response.json();
+                console.log('📊 Resposta do cadastro:', data);
+                
+                if (response.ok) {
+                    // Salvar tokens
+                    localStorage.setItem('access_token', data.access_token);
+                    localStorage.setItem('refresh_token', data.refresh_token);
+                    
+                    // Salvar dados do usuário
+                    const user = {
+                        id: data.user.id,
+                        email: data.user.email,
+                        name: data.user.fullName,
+                        role: data.membership.role,
+                        company_id: data.company.id,
+                        created_at: data.user.createdAt
+                    };
+                    localStorage.setItem('current_user', JSON.stringify(user));
+                    
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Cadastro bem-sucedido!</div>
+                        <div>Token: ${data.access_token.substring(0, 20)}...</div>
+                        <div>User: ${data.user.fullName}</div>
+                        <div>Company: ${data.company.name}</div>
+                        <div>Role: ${data.membership.role}</div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Erro: ${data.message || 'Erro desconhecido'}</div>`;
+                }
+            } catch (error) {
+                console.error('❌ Erro no cadastro:', error);
+                resultDiv.innerHTML = `<div class="error">❌ Erro de rede: ${error.message}</div>`;
+            }
+        }
+        
+        async function testProtectedEndpoint() {
+            const resultDiv = document.getElementById('protectedResult');
+            const token = localStorage.getItem('access_token');
+            
+            if (!token) {
+                resultDiv.innerHTML = '<div class="error">❌ Nenhum token encontrado. Faça login primeiro.</div>';
+                return;
+            }
+            
+            try {
+                console.log('🔒 Testando endpoint protegido com token:', token.substring(0, 20) + '...');
+                
+                const response = await fetch(`${API_BASE}/users/me`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                console.log('📊 Resposta do endpoint protegido:', data);
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Endpoint protegido funcionou!</div>
+                        <div>Status: ${response.status}</div>
+                        <div>Data: ${JSON.stringify(data, null, 2)}</div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">❌ Erro: ${data.message || 'Erro desconhecido'}</div>
+                        <div>Status: ${response.status}</div>
+                    `;
+                }
+            } catch (error) {
+                console.error('❌ Erro no endpoint protegido:', error);
+                resultDiv.innerHTML = `<div class="error">❌ Erro de rede: ${error.message}</div>`;
+            }
+        }
+        
+        async function testCompanies() {
+            const resultDiv = document.getElementById('protectedResult');
+            const token = localStorage.getItem('access_token');
+            
+            if (!token) {
+                resultDiv.innerHTML = '<div class="error">❌ Nenhum token encontrado. Faça login primeiro.</div>';
+                return;
+            }
+            
+            try {
+                console.log('🏢 Testando companies com token:', token.substring(0, 20) + '...');
+                
+                const response = await fetch(`${API_BASE}/companies`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                console.log('📊 Resposta do companies:', data);
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Companies funcionou!</div>
+                        <div>Status: ${response.status}</div>
+                        <div>Quantidade: ${Array.isArray(data) ? data.length : 'N/A'}</div>
+                        <div>Data: ${JSON.stringify(data, null, 2)}</div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">❌ Erro: ${data.message || 'Erro desconhecido'}</div>
+                        <div>Status: ${response.status}</div>
+                    `;
+                }
+            } catch (error) {
+                console.error('❌ Erro no companies:', error);
+                resultDiv.innerHTML = `<div class="error">❌ Erro de rede: ${error.message}</div>`;
+            }
+        }
+        
+        function debugState() {
+            const resultDiv = document.getElementById('debugResult');
+            const token = localStorage.getItem('access_token');
+            const refreshToken = localStorage.getItem('refresh_token');
+            const currentUser = localStorage.getItem('current_user');
+            
+            let userInfo = 'Não encontrado';
+            if (currentUser) {
+                try {
+                    const user = JSON.parse(currentUser);
+                    userInfo = `${user.name} (${user.email}) - ${user.role}`;
+                } catch (e) {
+                    userInfo = 'Erro ao parsear dados do usuário';
+                }
+            }
+            
+            resultDiv.innerHTML = `
+                <h3>Estado Atual:</h3>
+                <div><strong>Access Token:</strong> ${token ? token.substring(0, 20) + '...' : '❌ Não encontrado'}</div>
+                <div><strong>Refresh Token:</strong> ${refreshToken ? refreshToken.substring(0, 20) + '...' : '❌ Não encontrado'}</div>
+                <div><strong>Current User:</strong> ${userInfo}</div>
+                <div><strong>API Base:</strong> ${API_BASE}</div>
+                <div><strong>Timestamp:</strong> ${new Date().toISOString()}</div>
+                <div><strong>LocalStorage Keys:</strong> ${Object.keys(localStorage).join(', ')}</div>
+            `;
+        }
+        
+        function clearStorage() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('current_user');
+            document.getElementById('debugResult').innerHTML = '<div class="info">Storage limpo!</div>';
+        }
+        
+        // Debug inicial
+        debugState();
+    </script>
+</body>
+</html>

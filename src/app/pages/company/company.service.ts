@@ -20,7 +20,7 @@ export interface Company {
   letterhead_path?: string;
   active: boolean;
   created_by: string;
-  created_at: string;
+  created_at: string | null;
 }
 
 export interface CompanyMember {
@@ -98,25 +98,37 @@ export interface ApiError {
   providedIn: 'root'
 })
 export class CompanyService {
-  private readonly apiUrl = 'http://localhost:3000/api'; // TODO: Mover para environment quando disponível
-  private readonly companyEndpoint = `${this.apiUrl}/company`;
-  private readonly membersEndpoint = `${this.apiUrl}/company/members`;
-  private readonly documentsEndpoint = `${this.apiUrl}/company/documents`;
+  private readonly apiUrl = 'http://localhost:3000/v1'; // Usando a URL correta da API
+  private readonly companyEndpoint = `${this.apiUrl}/companies`;
+  private readonly membersEndpoint = `${this.apiUrl}/companies`;
+  private readonly documentsEndpoint = `${this.apiUrl}/companies`;
 
   constructor(private http: HttpClient, private apiService: ApiService) { }
 
   // ===== MÉTODOS DA EMPRESA =====
   
   getCompanyInfo(): Observable<Company> {
+    console.log('[CompanyService.getCompanyInfo] ===== BUSCANDO INFORMAÇÕES DA EMPRESA =====');
+    
     // Usa a API do backend para obter informações da empresa
     return this.apiService.getCompanies().pipe(
       map(companies => {
+        console.log('[CompanyService.getCompanyInfo] Dados brutos recebidos:', companies);
+        
         if (companies.length > 0) {
-          const company = companies[0];
-          return {
+          // A API retorna um array de objetos com { role, company }
+          // Precisamos extrair o objeto company
+          const companyData = companies[0];
+          console.log('[CompanyService.getCompanyInfo] Primeiro item:', companyData);
+          
+          // Verificar se tem a estrutura { role, company }
+          const company = companyData.company || companyData;
+          console.log('[CompanyService.getCompanyInfo] Empresa extraída:', company);
+          
+          const companyInfo: Company = {
             id: company.id,
             name: company.name,
-            cnpj: company.cnpj,
+            cnpj: company.cnpj || '',
             legal_name: company.name,
             state_registration: '',
             municipal_registration: '',
@@ -126,22 +138,76 @@ export class CompanyService {
             logo_path: company.logoPath || '',
             letterhead_path: company.letterheadPath || '',
             active: company.active,
-            created_by: company.createdBy || '',
+            created_by: company.createdById || '',
             created_at: company.createdAt
           };
+          
+          console.log('[CompanyService.getCompanyInfo] Informações da empresa processadas:', companyInfo);
+          return companyInfo;
         }
-        throw new Error('Nenhuma empresa encontrada');
+        
+        console.log('[CompanyService.getCompanyInfo] Nenhuma empresa encontrada - retornando empresa vazia');
+        
+        // Retornar uma empresa vazia para permitir criação/edição
+        const emptyCompany: Company = {
+          id: '',
+          name: '',
+          cnpj: '',
+          legal_name: '',
+          state_registration: '',
+          municipal_registration: '',
+          phone: '',
+          address: '',
+          email: '',
+          logo_path: '',
+          letterhead_path: '',
+          active: true,
+          created_by: '',
+          created_at: null
+        };
+        
+        console.log('[CompanyService.getCompanyInfo] Empresa vazia criada:', emptyCompany);
+        return emptyCompany;
       }),
-      catchError(this.handleError)
+      catchError(error => {
+        console.error('[CompanyService.getCompanyInfo] Erro ao buscar empresa:', error);
+        return this.handleError(error);
+      })
     );
   }
 
   updateCompanyInfo(data: CompanyUpdateData): Observable<Company> {
+    console.log('[CompanyService.updateCompanyInfo] ===== ATUALIZANDO INFORMAÇÕES DA EMPRESA =====');
+    console.log('[CompanyService.updateCompanyInfo] Dados recebidos do componente:', data);
+    console.log('[CompanyService.updateCompanyInfo] Tipo dos dados:', typeof data);
+    console.log('[CompanyService.updateCompanyInfo] Chaves dos dados:', Object.keys(data));
+    
     // Usa a API do backend para atualizar informações da empresa
     return this.apiService.getCompanies().pipe(
       switchMap(companies => {
+        console.log('[CompanyService.updateCompanyInfo] Empresas encontradas:', companies);
+        console.log('[CompanyService.updateCompanyInfo] Quantidade de empresas:', companies.length);
+        
         if (companies.length > 0) {
-          const companyId = companies[0].id;
+          // Extrair o ID da empresa da estrutura { role, company }
+          const companyData = companies[0];
+          console.log('[CompanyService.updateCompanyInfo] CompanyData completo:', companyData);
+          
+          const company = companyData.company || companyData;
+          console.log('[CompanyService.updateCompanyInfo] Company extraída:', company);
+          
+          const companyId = company.id;
+          console.log('[CompanyService.updateCompanyInfo] ID da empresa extraído:', companyId);
+          console.log('[CompanyService.updateCompanyInfo] Tipo do ID:', typeof companyId);
+          console.log('[CompanyService.updateCompanyInfo] Role do usuário na empresa:', companyData.role);
+          
+          if (!companyId) {
+            console.error('[CompanyService.updateCompanyInfo] ERRO: companyId é undefined ou null');
+            throw new Error('ID da empresa não encontrado');
+          }
+          
+          console.log('[CompanyService.updateCompanyInfo] Dados recebidos do componente:', data);
+          
           const updateData = {
             name: data.name,
             phone: data.phone,
@@ -150,27 +216,62 @@ export class CompanyService {
             letterheadPath: data.letterhead_path,
             active: data.active
           };
+          
+          console.log('[CompanyService.updateCompanyInfo] Dados de atualização preparados:', updateData);
+          console.log('[CompanyService.updateCompanyInfo] Campos mapeados:');
+          console.log('  - name:', data.name, '->', updateData.name);
+          console.log('  - phone:', data.phone, '->', updateData.phone);
+          console.log('  - address:', data.address, '->', updateData.address);
+          console.log('  - logoPath:', data.logo_path, '->', updateData.logoPath);
+          console.log('  - letterheadPath:', data.letterhead_path, '->', updateData.letterheadPath);
+          console.log('  - active:', data.active, '->', updateData.active);
+          console.log('[CompanyService.updateCompanyInfo] Chamando updateCompany com ID:', companyId);
           return this.apiService.updateCompany(companyId, updateData);
         }
-        throw new Error('Nenhuma empresa encontrada');
+        
+        // Se não há empresa, criar uma nova
+        console.log('[CompanyService.updateCompanyInfo] Nenhuma empresa encontrada - criando nova empresa');
+        
+        const createData = {
+          name: data.name,
+          cnpj: data.cnpj,
+          phone: data.phone,
+          address: data.address,
+          logoPath: data.logo_path,
+          letterheadPath: data.letterhead_path,
+          active: data.active !== undefined ? data.active : true
+        };
+        
+        console.log('[CompanyService.updateCompanyInfo] Dados para criação:', createData);
+        return this.apiService.createCompany(createData);
       }),
-      map(updatedCompany => ({
-        id: updatedCompany.id,
-        name: updatedCompany.name,
-        cnpj: updatedCompany.cnpj,
-        legal_name: updatedCompany.name,
-        state_registration: '',
-        municipal_registration: '',
-        phone: updatedCompany.phone || '',
-        address: updatedCompany.address || '',
-        email: '',
-        logo_path: updatedCompany.logoPath || '',
-        letterhead_path: updatedCompany.letterheadPath || '',
-        active: updatedCompany.active,
-        created_by: updatedCompany.createdBy || '',
-        created_at: updatedCompany.createdAt
-      })),
-      catchError(this.handleError)
+      map(updatedCompany => {
+        console.log('[CompanyService.updateCompanyInfo] Empresa atualizada recebida:', updatedCompany);
+        
+        const companyInfo: Company = {
+          id: updatedCompany.id,
+          name: updatedCompany.name,
+          cnpj: updatedCompany.cnpj || '',
+          legal_name: updatedCompany.name,
+          state_registration: '',
+          municipal_registration: '',
+          phone: updatedCompany.phone || '',
+          address: updatedCompany.address || '',
+          email: '',
+          logo_path: updatedCompany.logoPath || '',
+          letterhead_path: updatedCompany.letterheadPath || '',
+          active: updatedCompany.active,
+          created_by: updatedCompany.createdById || '',
+          created_at: updatedCompany.createdAt
+        };
+        
+        console.log('[CompanyService.updateCompanyInfo] Informações da empresa processadas:', companyInfo);
+        return companyInfo;
+      }),
+      catchError(error => {
+        console.error('[CompanyService.updateCompanyInfo] Erro ao atualizar empresa:', error);
+        return this.handleError(error);
+      })
     );
   }
 
@@ -210,26 +311,36 @@ export class CompanyService {
     // Usa a API do backend para obter membros da empresa
     return this.apiService.getCompanies().pipe(
       switchMap(companies => {
+        console.log('[CompanyService.getCompanyMembers] Empresas encontradas:', companies);
+        
         if (companies.length > 0) {
-          const companyId = companies[0].id;
+          // Extrair o ID da empresa da estrutura { role, company }
+          const companyData = companies[0];
+          const company = companyData.company || companyData;
+          const companyId = company.id;
+          
+          console.log('[CompanyService.getCompanyMembers] ID da empresa:', companyId);
           return this.apiService.getCompanyMembers(companyId);
         }
         throw new Error('Nenhuma empresa encontrada');
       }),
-      map(members => members.map(member => ({
-        id: member.id,
-        company_id: member.companyId || '',
-        user_id: member.userId || '',
-        role: member.role as 'admin' | 'member',
-        name: member.userFullName || '',
-        email: member.userEmail || '',
-        created_at: member.createdAt,
-        user: {
-          id: member.userId || '',
-          full_name: member.userFullName || '',
-          email: member.userEmail || ''
-        }
-      }))),
+      map(members => {
+        console.log('[CompanyService.getCompanyMembers] Membros recebidos:', members);
+        return members.map(member => ({
+          id: member.id,
+          company_id: member.companyId || '',
+          user_id: member.userId || '',
+          role: member.role as 'admin' | 'member',
+          name: member.userFullName || '',
+          email: member.userEmail || '',
+          created_at: member.createdAt,
+          user: {
+            id: member.userId || '',
+            full_name: member.userFullName || '',
+            email: member.userEmail || ''
+          }
+        }));
+      }),
       catchError(this.handleError)
     );
   }
@@ -238,26 +349,36 @@ export class CompanyService {
     // Usa a API do backend para adicionar membro
     return this.apiService.getCompanies().pipe(
       switchMap(companies => {
+        console.log('[CompanyService.addMember] Empresas encontradas:', companies);
+        
         if (companies.length > 0) {
-          const companyId = companies[0].id;
+          // Extrair o ID da empresa da estrutura { role, company }
+          const companyData = companies[0];
+          const company = companyData.company || companyData;
+          const companyId = company.id;
+          
+          console.log('[CompanyService.addMember] ID da empresa:', companyId);
           return this.apiService.inviteMember(companyId, { email, role });
         }
         throw new Error('Nenhuma empresa encontrada');
       }),
-      map(member => ({
-        id: member.id,
-        company_id: member.companyId || '',
-        user_id: member.userId || '',
-        role: member.role as 'admin' | 'member',
-        name: member.userFullName || '',
-        email: member.userEmail || '',
-        created_at: member.createdAt,
-        user: {
-          id: member.userId || '',
-          full_name: member.userFullName || '',
-          email: member.userEmail || ''
-        }
-      })),
+      map(member => {
+        console.log('[CompanyService.addMember] Membro adicionado:', member);
+        return {
+          id: member.id,
+          company_id: member.companyId || '',
+          user_id: member.userId || '',
+          role: member.role as 'admin' | 'member',
+          name: member.userFullName || '',
+          email: member.userEmail || '',
+          created_at: member.createdAt,
+          user: {
+            id: member.userId || '',
+            full_name: member.userFullName || '',
+            email: member.userEmail || ''
+          }
+        };
+      }),
       catchError(this.handleError)
     );
   }
@@ -267,7 +388,11 @@ export class CompanyService {
     return this.apiService.getCompanies().pipe(
       switchMap(companies => {
         if (companies.length > 0) {
-          const companyId = companies[0].id;
+          // Extrair o ID da empresa da estrutura { role, company }
+          const companyData = companies[0];
+          const company = companyData.company || companyData;
+          const companyId = company.id;
+          
           return this.apiService.updateMember(companyId, memberId, { role });
         }
         throw new Error('Nenhuma empresa encontrada');
@@ -295,7 +420,11 @@ export class CompanyService {
     return this.apiService.getCompanies().pipe(
       switchMap(companies => {
         if (companies.length > 0) {
-          const companyId = companies[0].id;
+          // Extrair o ID da empresa da estrutura { role, company }
+          const companyData = companies[0];
+          const company = companyData.company || companyData;
+          const companyId = company.id;
+          
           return this.apiService.removeMember(companyId, memberId);
         }
         throw new Error('Nenhuma empresa encontrada');
@@ -312,7 +441,11 @@ export class CompanyService {
     return this.apiService.getCompanies().pipe(
       switchMap(companies => {
         if (companies.length > 0) {
-          const companyId = companies[0].id;
+          // Extrair o ID da empresa da estrutura { role, company }
+          const companyData = companies[0];
+          const company = companyData.company || companyData;
+          const companyId = company.id;
+          
           return this.apiService.getDocuments(companyId);
         }
         throw new Error('Nenhuma empresa encontrada');
@@ -442,7 +575,11 @@ export class CompanyService {
     return this.apiService.getCompanies().pipe(
       switchMap(companies => {
         if (companies.length > 0) {
-          const companyId = companies[0].id;
+          // Extrair o ID da empresa da estrutura { role, company }
+          const companyData = companies[0];
+          const company = companyData.company || companyData;
+          const companyId = company.id;
+          
           // Primeiro cria o documento
           const createData = {
             docType: documentData.doc_type,

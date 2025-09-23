@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { CompanyService, Company, CompanyMember, CompanyDocument, CompanyUpdateData, DocumentUpdateData } from './company.service';
 import { AuthService } from '../auth-pages/auth.service';
+import Swal from 'sweetalert2';
 
 // Interfaces para configuração dos formulários e tabelas
 interface FormField {
@@ -196,6 +197,7 @@ export class CompanyComponent implements OnInit, OnDestroy {
   // ===== LIFECYCLE HOOKS =====
 
   ngOnInit() {
+    console.log('[CompanyComponent.ngOnInit] ===== COMPONENTE INICIADO =====');
     this.initializeComponent();
   }
 
@@ -207,6 +209,7 @@ export class CompanyComponent implements OnInit, OnDestroy {
   // ===== MÉTODOS DE INICIALIZAÇÃO =====
   
   private initializeComponent() {
+    console.log('[CompanyComponent.initializeComponent] ===== INICIALIZANDO COMPONENTE =====');
     this.loadCompanyData();
     this.loadMembers();
     this.loadDocuments();
@@ -222,6 +225,7 @@ export class CompanyComponent implements OnInit, OnDestroy {
   // ===== MÉTODOS DA EMPRESA =====
   
   private loadCompanyData() {
+    console.log('[CompanyComponent.loadCompanyData] ===== CARREGANDO DADOS DA EMPRESA =====');
     this.companyLoading = true;
     this.companyError = '';
 
@@ -229,13 +233,39 @@ export class CompanyComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (company: Company) => {
+          console.log('[CompanyComponent.loadCompanyData] Dados recebidos:', company);
           this.company = company;
           this.companyLoading = false;
+          console.log('[CompanyComponent.loadCompanyData] Empresa definida:', this.company);
         },
         error: (error: any) => {
-          this.companyError = 'Erro ao carregar dados da empresa';
+          console.error('[CompanyComponent.loadCompanyData] Erro ao carregar:', error);
+          
+          // Se não há empresa, criar uma empresa vazia para permitir edição
+          if (error.message && error.message.includes('Nenhuma empresa encontrada')) {
+            console.log('[CompanyComponent.loadCompanyData] Nenhuma empresa encontrada - criando empresa vazia para edição');
+            this.company = {
+              id: '',
+              name: '',
+              cnpj: '',
+              legal_name: '',
+              state_registration: '',
+              municipal_registration: '',
+              phone: '',
+              address: '',
+              email: '',
+              logo_path: '',
+              letterhead_path: '',
+              active: true,
+              created_by: '',
+              created_at: null as string | null
+            };
+            this.companyError = '';
+          } else {
+            this.companyError = 'Erro ao carregar dados da empresa';
+          }
+          
           this.companyLoading = false;
-          console.error('Load company error:', error);
         }
       });
   }
@@ -248,6 +278,9 @@ export class CompanyComponent implements OnInit, OnDestroy {
   }
 
   private initializeCompanyForm() {
+    console.log('[CompanyComponent.initializeCompanyForm] ===== INICIALIZANDO FORMULÁRIO =====');
+    console.log('[CompanyComponent.initializeCompanyForm] Dados da empresa:', this.company);
+    
     this.companyForm = {
       name: this.company?.name || '',
       cnpj: this.company?.cnpj || '',
@@ -258,6 +291,8 @@ export class CompanyComponent implements OnInit, OnDestroy {
       address: this.company?.address || '',
       email: this.company?.email || ''
     };
+    
+    console.log('[CompanyComponent.initializeCompanyForm] Formulário inicializado:', this.companyForm);
   }
 
   onCancelEditCompany() {
@@ -266,9 +301,20 @@ export class CompanyComponent implements OnInit, OnDestroy {
   }
 
   onSaveCompany() {
+    console.log('[CompanyComponent.onSaveCompany] ===== SALVANDO INFORMAÇÕES DA EMPRESA =====');
+    console.log('[CompanyComponent.onSaveCompany] Dados do formulário:', this.companyForm);
+    console.log('[CompanyComponent.onSaveCompany] Tipo do formulário:', typeof this.companyForm);
+    console.log('[CompanyComponent.onSaveCompany] Chaves do formulário:', Object.keys(this.companyForm));
+    console.log('[CompanyComponent.onSaveCompany] Dados da empresa atual:', this.company);
+    console.log('[CompanyComponent.onSaveCompany] ID da empresa atual:', this.company?.id);
+    
     if (!this.validateCompanyForm()) {
+      console.log('[CompanyComponent.onSaveCompany] Validação falhou');
       return;
     }
+    
+    console.log('[CompanyComponent.onSaveCompany] Validação passou - prosseguindo com salvamento');
+    console.log('[CompanyComponent.onSaveCompany] Chamando companyService.updateCompanyInfo...');
 
     this.isSaving = true;
     this.companyError = '';
@@ -276,30 +322,60 @@ export class CompanyComponent implements OnInit, OnDestroy {
     this.companyService.updateCompanyInfo(this.companyForm)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (updatedCompany: Company) => {
+        next: async (updatedCompany: Company) => {
+          console.log('[CompanyComponent.onSaveCompany] Empresa atualizada com sucesso:', updatedCompany);
+          
           this.company = updatedCompany;
-    this.editingCompany = false;
-    this.companyForm = {};
+          this.editingCompany = false;
+          this.companyForm = {};
           this.isSaving = false;
-          // TODO: Mostrar notificação de sucesso
+          
+          // Mostrar notificação de sucesso
+          await Swal.fire({
+            icon: 'success',
+            title: 'Sucesso!',
+            text: 'Informações da empresa atualizadas com sucesso.',
+            showConfirmButton: true,
+            timer: 3000
+          });
+          
+          console.log('[CompanyComponent.onSaveCompany] Atualização concluída');
         },
-        error: (error: any) => {
+        error: async (error: any) => {
+          console.error('[CompanyComponent.onSaveCompany] Erro ao salvar:', error);
+          
           this.companyError = 'Erro ao salvar informações da empresa';
           this.isSaving = false;
-          console.error('Save company error:', error);
+          
+          // Mostrar notificação de erro
+          await Swal.fire({
+            icon: 'error',
+            title: 'Erro!',
+            text: 'Não foi possível atualizar as informações da empresa. Tente novamente.',
+            showConfirmButton: true
+          });
         }
       });
   }
 
   private validateCompanyForm(): boolean {
+    console.log('[CompanyComponent.validateCompanyForm] Validando formulário...');
+    console.log('[CompanyComponent.validateCompanyForm] Dados do formulário:', this.companyForm);
+    console.log('[CompanyComponent.validateCompanyForm] Nome:', this.companyForm.name);
+    console.log('[CompanyComponent.validateCompanyForm] CNPJ:', this.companyForm.cnpj);
+    
     if (!this.companyForm.name?.trim()) {
+      console.log('[CompanyComponent.validateCompanyForm] ERRO: Nome da empresa é obrigatório');
       this.companyError = 'Nome da empresa é obrigatório';
       return false;
     }
     if (!this.companyForm.cnpj?.trim()) {
+      console.log('[CompanyComponent.validateCompanyForm] ERRO: CNPJ é obrigatório');
       this.companyError = 'CNPJ é obrigatório';
       return false;
     }
+    
+    console.log('[CompanyComponent.validateCompanyForm] ✅ Validação passou');
     return true;
   }
 
@@ -336,7 +412,11 @@ export class CompanyComponent implements OnInit, OnDestroy {
   }
 
   onAddMember() {
+    console.log('[CompanyComponent.onAddMember] ===== ADICIONANDO FUNCIONÁRIO =====');
+    console.log('[CompanyComponent.onAddMember] Dados do formulário:', this.memberForm);
+    
     if (!this.validateMemberForm()) {
+      console.log('[CompanyComponent.onAddMember] Validação falhou');
       return;
     }
 
@@ -346,17 +426,38 @@ export class CompanyComponent implements OnInit, OnDestroy {
     this.companyService.addMember(this.memberForm.email, this.memberForm.role)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (newMember: CompanyMember) => {
+        next: async (newMember: CompanyMember) => {
+          console.log('[CompanyComponent.onAddMember] Funcionário adicionado com sucesso:', newMember);
+          
           this.members.push(newMember);
           this.showAddMemberForm = false;
           this.resetMemberForm();
           this.isAddingMember = false;
-          // TODO: Mostrar notificação de sucesso
+          
+          // Mostrar notificação de sucesso
+          await Swal.fire({
+            icon: 'success',
+            title: 'Sucesso!',
+            text: 'Funcionário adicionado com sucesso.',
+            showConfirmButton: true,
+            timer: 3000
+          });
+          
+          console.log('[CompanyComponent.onAddMember] Adição concluída');
         },
-        error: (error: any) => {
+        error: async (error: any) => {
+          console.error('[CompanyComponent.onAddMember] Erro ao adicionar:', error);
+          
           this.membersError = 'Erro ao adicionar funcionário';
           this.isAddingMember = false;
-          console.error('Add member error:', error);
+          
+          // Mostrar notificação de erro
+          await Swal.fire({
+            icon: 'error',
+            title: 'Erro!',
+            text: 'Não foi possível adicionar o funcionário. Tente novamente.',
+            showConfirmButton: true
+          });
         }
       });
   }
@@ -379,20 +480,59 @@ export class CompanyComponent implements OnInit, OnDestroy {
   }
 
   onRemoveMember(member: CompanyMember) {
-    if (confirm(`Tem certeza que deseja remover o funcionário ${this.getMemberDisplayName(member)}?`)) {
-      this.companyService.removeMember(member.id)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.members = this.members.filter(m => m.id !== member.id);
-            // TODO: Mostrar notificação de sucesso
-          },
-          error: (error: any) => {
-            this.membersError = 'Erro ao remover funcionário';
-            console.error('Remove member error:', error);
-          }
-        });
-    }
+    console.log('[CompanyComponent.onRemoveMember] ===== REMOVENDO FUNCIONÁRIO =====');
+    console.log('[CompanyComponent.onRemoveMember] Funcionário:', member);
+    
+    const memberName = this.getMemberDisplayName(member);
+    
+    Swal.fire({
+      title: 'Confirmar Remoção',
+      text: `Tem certeza que deseja remover o funcionário ${memberName}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sim, remover!',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        console.log('[CompanyComponent.onRemoveMember] Confirmação recebida, removendo...');
+        
+        this.companyService.removeMember(member.id)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: async () => {
+              console.log('[CompanyComponent.onRemoveMember] Funcionário removido com sucesso');
+              
+              this.members = this.members.filter(m => m.id !== member.id);
+              
+              // Mostrar notificação de sucesso
+              await Swal.fire({
+                icon: 'success',
+                title: 'Removido!',
+                text: 'Funcionário removido com sucesso.',
+                showConfirmButton: true,
+                timer: 3000
+              });
+            },
+            error: async (error: any) => {
+              console.error('[CompanyComponent.onRemoveMember] Erro ao remover:', error);
+              
+              this.membersError = 'Erro ao remover funcionário';
+              
+              // Mostrar notificação de erro
+              await Swal.fire({
+                icon: 'error',
+                title: 'Erro!',
+                text: 'Não foi possível remover o funcionário. Tente novamente.',
+                showConfirmButton: true
+              });
+            }
+          });
+      } else {
+        console.log('[CompanyComponent.onRemoveMember] Remoção cancelada');
+      }
+    });
   }
 
   getMemberDisplayName(member: CompanyMember): string {
@@ -465,11 +605,23 @@ export class CompanyComponent implements OnInit, OnDestroy {
   // ===== MÉTODOS GETTER PARA FORMULÁRIOS =====
   
   getCompanyFormValue(key: string): any {
-    return (this.companyForm as any)[key] || '';
+    const value = (this.companyForm as any)[key] || '';
+    console.log(`[CompanyComponent.getCompanyFormValue] Campo: ${key}, Valor: ${value}`);
+    return value;
   }
 
   setCompanyFormValue(key: string, value: any): void {
+    console.log(`[CompanyComponent.setCompanyFormValue] ===== DEFININDO VALOR =====`);
+    console.log(`[CompanyComponent.setCompanyFormValue] Chave: ${key}`);
+    console.log(`[CompanyComponent.setCompanyFormValue] Valor: ${value}`);
+    console.log(`[CompanyComponent.setCompanyFormValue] Tipo do valor: ${typeof value}`);
+    console.log(`[CompanyComponent.setCompanyFormValue] Formulário antes:`, this.companyForm);
+    
     (this.companyForm as any)[key] = value;
+    
+    console.log(`[CompanyComponent.setCompanyFormValue] Formulário depois:`, this.companyForm);
+    console.log(`[CompanyComponent.setCompanyFormValue] Valor confirmado: ${(this.companyForm as any)[key]}`);
+    console.log(`[CompanyComponent.setCompanyFormValue] ===== VALOR DEFINIDO =====`);
   }
 
   getMemberFormValue(key: string): any {
@@ -482,12 +634,32 @@ export class CompanyComponent implements OnInit, OnDestroy {
 
   onInputChange(key: string, event: Event): void {
     const target = event.target as HTMLInputElement;
+    console.log(`[CompanyComponent.onInputChange] ===== CAPTURANDO INPUT =====`);
+    console.log(`[CompanyComponent.onInputChange] Campo: ${key}`);
+    console.log(`[CompanyComponent.onInputChange] Valor anterior: ${(this.companyForm as any)[key]}`);
+    console.log(`[CompanyComponent.onInputChange] Valor novo: ${target.value}`);
+    console.log(`[CompanyComponent.onInputChange] Tipo do valor: ${typeof target.value}`);
+    
     this.setCompanyFormValue(key, target.value);
+    
+    console.log(`[CompanyComponent.onInputChange] Formulário após mudança:`, this.companyForm);
+    console.log(`[CompanyComponent.onInputChange] Valor confirmado: ${(this.companyForm as any)[key]}`);
+    console.log(`[CompanyComponent.onInputChange] ===== INPUT CAPTURADO =====`);
   }
 
   onTextareaChange(key: string, event: Event): void {
     const target = event.target as HTMLTextAreaElement;
+    console.log(`[CompanyComponent.onTextareaChange] ===== CAPTURANDO TEXTAREA =====`);
+    console.log(`[CompanyComponent.onTextareaChange] Campo: ${key}`);
+    console.log(`[CompanyComponent.onTextareaChange] Valor anterior: ${(this.companyForm as any)[key]}`);
+    console.log(`[CompanyComponent.onTextareaChange] Valor novo: ${target.value}`);
+    console.log(`[CompanyComponent.onTextareaChange] Tipo do valor: ${typeof target.value}`);
+    
     this.setCompanyFormValue(key, target.value);
+    
+    console.log(`[CompanyComponent.onTextareaChange] Formulário após mudança:`, this.companyForm);
+    console.log(`[CompanyComponent.onTextareaChange] Valor confirmado: ${(this.companyForm as any)[key]}`);
+    console.log(`[CompanyComponent.onTextareaChange] ===== TEXTAREA CAPTURADO =====`);
   }
 
   onSelectChange(key: string, event: Event): void {

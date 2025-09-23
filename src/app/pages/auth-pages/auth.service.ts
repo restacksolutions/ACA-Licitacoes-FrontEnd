@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, from, of } from 'rxjs';
+import { BehaviorSubject, Observable, from, of, firstValueFrom } from 'rxjs';
 import { catchError, map, mergeMap, switchMap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { supabase } from '../../core/supa';
@@ -52,33 +52,65 @@ export class AuthService {
 
   /** LOGIN: sucesso => true, falha => false; usa API do backend */
   login(email: string, password: string): Observable<boolean> {
-    console.log('[AuthService.login] Iniciando login para:', email);
+    console.log('[AuthService.login] ===== INICIANDO LOGIN =====');
+    console.log('📧 Email:', email);
+    console.log('🌐 API Base URL:', this.apiService['apiBaseUrl']);
+    
     const loginRequest: LoginRequest = { email, password };
     
     return this.apiService.login(loginRequest).pipe(
       switchMap((authResponse: AuthResponse) => {
-        console.log('[AuthService.login] API response recebida:', authResponse);
+        console.log('[AuthService.login] ===== RESPOSTA DA API RECEBIDA =====');
+        console.log('📊 AuthResponse:', authResponse);
+        console.log('👤 User ID:', authResponse.user_id);
+        console.log('📧 Email:', authResponse.email);
+        console.log('🔑 Access Token:', authResponse.access_token ? 'Presente' : 'Ausente');
         
-        // Converte resposta da API para formato interno
+        // Validação da resposta
+        if (!authResponse || !authResponse.access_token) {
+          console.error('[AuthService.login] Resposta inválida da API:', authResponse);
+          this.lastErrorMessage = 'Resposta inválida do servidor';
+          return of(false);
+        }
+        
+        // Para modo de desenvolvimento, criar dados mock do usuário
         const user: User = {
-          id: authResponse.user.id,
-          email: authResponse.user.email,
-          name: authResponse.user.fullName,
-          role: this.mapApiRoleToUI(authResponse.membership.role),
-          company_id: authResponse.company.id,
-          created_at: authResponse.user.createdAt
+          id: authResponse.user_id || 'mock-user-id',
+          email: authResponse.email,
+          name: authResponse.email.split('@')[0], // Nome baseado no email
+          role: 'ADMIN', // Role padrão para desenvolvimento
+          company_id: 'mock-company-id',
+          created_at: new Date().toISOString()
         };
 
-        console.log('[AuthService.login] Usuário criado:', user);
+        console.log('[AuthService.login] ===== USUÁRIO CRIADO =====');
+        console.log('👤 User object:', user);
+        
+        // Salvar no localStorage (tokens já salvos pelo ApiService)
+        console.log('[AuthService.login] ===== SALVANDO DADOS DO USUÁRIO =====');
+        console.log('💾 Salvando current_user no localStorage:', user);
+        
         localStorage.setItem('current_user', JSON.stringify(user));
         this.currentUserSubject.next(user);
         this.lastErrorMessage = '';
         
+        console.log('[AuthService.login] ===== LOGIN CONCLUÍDO COM SUCESSO =====');
+        console.log('🔍 Verificando localStorage após login:', {
+          access_token: localStorage.getItem('access_token') ? 'Presente' : 'Ausente',
+          refresh_token: localStorage.getItem('refresh_token') ? 'Presente' : 'Ausente',
+          current_user: localStorage.getItem('current_user') ? 'Presente' : 'Ausente'
+        });
         return of(true);
       }),
       catchError((err) => {
-        console.error('[AuthService.login] Erro no login:', err);
+        console.error('[AuthService.login] ===== ERRO NO LOGIN =====');
+        console.error('🚨 Erro:', err);
+        console.error('📝 Mensagem:', err.message);
+        console.error('🔍 Stack:', err.stack);
+        
         this.lastErrorMessage = this.mapApiError(err);
+        console.error('📤 Mensagem de erro final:', this.lastErrorMessage);
+        
         return of(false);
       })
     );
@@ -91,7 +123,11 @@ export class AuthService {
     fullName: string; email: string; password: string;
     companyName: string; cnpj?: string; phone?: string; address?: string;
   }): Promise<boolean> {
-    console.log('[AuthService.signUpAndOnboard] payload', { ...payload, password: '***' });
+    console.log('[AuthService.signUpAndOnboard] ===== INICIANDO CADASTRO =====');
+    console.log('📧 Email:', payload.email);
+    console.log('👤 Nome:', payload.fullName);
+    console.log('🏢 Empresa:', payload.companyName);
+    console.log('🌐 API Base URL:', this.apiService['apiBaseUrl']);
 
     const registerRequest: RegisterRequest = {
       fullName: payload.fullName,
@@ -104,28 +140,60 @@ export class AuthService {
     };
 
     try {
-      const authResponse = await this.apiService.register(registerRequest).toPromise();
-      console.log('[AuthService.signUpAndOnboard] API response:', authResponse);
+      console.log('[AuthService.signUpAndOnboard] Enviando requisição para API...');
+      const authResponse = await firstValueFrom(this.apiService.register(registerRequest));
+      
+      console.log('[AuthService.signUpAndOnboard] ===== RESPOSTA DA API RECEBIDA =====');
+      console.log('📊 AuthResponse:', authResponse);
+      console.log('👤 User ID:', authResponse.user_id);
+      console.log('📧 Email:', authResponse.email);
+      console.log('🔑 Access Token:', authResponse.access_token ? 'Presente' : 'Ausente');
+      console.log('🏢 Company ID:', authResponse.company_id || 'Não fornecido');
 
-      // Converte resposta da API para formato interno
+      // Validação da resposta
+      if (!authResponse || !authResponse.access_token) {
+        console.error('[AuthService.signUpAndOnboard] Resposta inválida da API:', authResponse);
+        this.lastErrorMessage = 'Resposta inválida do servidor';
+        throw new Error(this.lastErrorMessage);
+      }
+
+      // Para modo de desenvolvimento, criar dados mock do usuário
       const user: User = {
-        id: authResponse!.user.id,
-        email: authResponse!.user.email,
-        name: authResponse!.user.fullName,
-        role: this.mapApiRoleToUI(authResponse!.membership.role),
-        company_id: authResponse!.company.id,
-        created_at: authResponse!.user.createdAt
+        id: authResponse.user_id || 'mock-user-id',
+        email: authResponse.email,
+        name: payload.fullName, // Usar o nome fornecido no cadastro
+        role: 'ADMIN', // Role padrão para desenvolvimento
+        company_id: authResponse.company_id || 'mock-company-id',
+        created_at: new Date().toISOString()
       };
 
-      console.log('[AuthService.signUpAndOnboard] Usuário criado:', user);
+      console.log('[AuthService.signUpAndOnboard] ===== USUÁRIO CRIADO =====');
+      console.log('👤 User object:', user);
+      
+      // Salvar tokens no localStorage (já salvos pelo ApiService)
+      console.log('[AuthService.signUpAndOnboard] ===== SALVANDO DADOS DO USUÁRIO =====');
+      console.log('💾 Salvando current_user no localStorage:', user);
+      
       localStorage.setItem('current_user', JSON.stringify(user));
       this.currentUserSubject.next(user);
 
-      this.lastErrorMessage = 'Conta criada com sucesso! Faça login para continuar.';
+      this.lastErrorMessage = 'Conta criada com sucesso!';
+      console.log('[AuthService.signUpAndOnboard] ===== CADASTRO CONCLUÍDO COM SUCESSO =====');
+      console.log('🔍 Verificando localStorage após cadastro:', {
+        access_token: localStorage.getItem('access_token') ? 'Presente' : 'Ausente',
+        refresh_token: localStorage.getItem('refresh_token') ? 'Presente' : 'Ausente',
+        current_user: localStorage.getItem('current_user') ? 'Presente' : 'Ausente'
+      });
       return true;
     } catch (error: any) {
-      console.error('[AuthService.signUpAndOnboard] erro:', error);
+      console.error('[AuthService.signUpAndOnboard] ===== ERRO NO CADASTRO =====');
+      console.error('🚨 Erro:', error);
+      console.error('📝 Mensagem:', error.message);
+      console.error('🔍 Stack:', error.stack);
+      
       this.lastErrorMessage = this.mapApiError(error);
+      console.error('📤 Mensagem de erro final:', this.lastErrorMessage);
+      
       throw new Error(this.lastErrorMessage);
     }
   }
@@ -177,11 +245,13 @@ export class AuthService {
   // Método de debug temporário
   debugAuthState() {
     console.log('=== DEBUG AUTH STATE ===');
-    console.log('Token:', localStorage.getItem('access_token'));
-    console.log('Current User (localStorage):', localStorage.getItem('current_user'));
-    console.log('Current User (Subject):', this.currentUserSubject.value);
-    console.log('isLoggedIn():', this.isLoggedIn());
-    console.log('getCurrentUser():', this.getCurrentUser());
+    console.log('🔑 Access Token:', localStorage.getItem('access_token') ? 'Presente' : 'Ausente');
+    console.log('🔄 Refresh Token:', localStorage.getItem('refresh_token') ? 'Presente' : 'Ausente');
+    console.log('👤 Current User (localStorage):', localStorage.getItem('current_user'));
+    console.log('👤 Current User (Subject):', this.currentUserSubject.value);
+    console.log('✅ isLoggedIn():', this.isLoggedIn());
+    console.log('👤 getCurrentUser():', this.getCurrentUser());
+    console.log('🌐 API Base URL:', this.apiService['apiBaseUrl']);
     console.log('========================');
   }
 

@@ -32,22 +32,47 @@ export class SignUpComponent implements OnInit {
   }
 
   async onSubmit() {
+    console.log('[SignUp] ===== INICIANDO SUBMIT =====');
+    console.log('👤 Nome:', this.name);
+    console.log('📧 Email:', this.email);
+    console.log('🔒 Password:', this.password ? '***' : 'vazio');
+    console.log('🏢 Empresa:', this.companyName);
+    
     if (!this.name || !this.email || !this.password || !this.confirmPassword || !this.companyName) {
-      await Swal.fire({ icon: 'warning', title: 'Campos obrigatórios', text: 'Preencha todos os campos.' });
+      console.log('[SignUp] Campos obrigatórios não preenchidos');
+      await Swal.fire({ 
+        icon: 'warning', 
+        title: 'Campos obrigatórios', 
+        text: 'Preencha todos os campos obrigatórios.' 
+      });
       return;
     }
+    
     if (this.password !== this.confirmPassword) {
-      await Swal.fire({ icon: 'error', title: 'Senhas diferentes', text: 'As senhas não coincidem.' });
+      console.log('[SignUp] Senhas não coincidem');
+      await Swal.fire({ 
+        icon: 'error', 
+        title: 'Senhas diferentes', 
+        text: 'As senhas não coincidem.' 
+      });
       return;
     }
+    
     if (this.password.length < 6) {
-      await Swal.fire({ icon: 'error', title: 'Senha fraca', text: 'Use pelo menos 6 caracteres.' });
+      console.log('[SignUp] Senha muito fraca');
+      await Swal.fire({ 
+        icon: 'error', 
+        title: 'Senha fraca', 
+        text: 'Use pelo menos 6 caracteres.' 
+      });
       return;
     }
 
     this.loading = true;
+    this.error = '';
 
     try {
+      console.log('[SignUp] Chamando auth.signUpAndOnboard...');
       const ok = await this.auth.signUpAndOnboard({
         fullName: this.name,
         email: this.email,
@@ -57,21 +82,50 @@ export class SignUpComponent implements OnInit {
         phone: this.phone || undefined,
         address: this.address || undefined,
       });
-      console.log('[SignUp] result:', ok);
+      
+      console.log('[SignUp] ===== RESULTADO DO CADASTRO =====');
+      console.log('✅ Sucesso:', ok);
 
-      await Swal.fire({
-        icon: 'success',
-        title: 'Conta criada com sucesso!',
-        text: 'Sua conta foi criada. Agora você pode fazer login.',
-        showConfirmButton: true
-      });
-
-      // Removido redirecionamento automático
+      if (ok) {
+        console.log('[SignUp] Cadastro bem-sucedido!');
+        console.log('[SignUp] Verificando se usuário está logado:', this.auth.isLoggedIn());
+        console.log('[SignUp] Dados do usuário:', this.auth.getCurrentUser());
+        
+        await Swal.fire({
+          icon: 'success',
+          title: 'Conta criada com sucesso!',
+          text: 'Sua conta foi criada e você foi automaticamente logado.',
+          showConfirmButton: true
+        });
+        
+        // Redirecionar para dashboard após cadastro bem-sucedido (usuário já está logado)
+        console.log('[SignUp] Redirecionando para dashboard...');
+        this.router.navigate(['/dashboard']);
+      } else {
+        const msg = this.auth.getLastError() || 'Erro ao criar conta.';
+        console.log('[SignUp] Cadastro falhou:', msg);
+        this.error = msg;
+        await Swal.fire({ 
+          icon: 'error', 
+          title: 'Falha no cadastro', 
+          text: msg 
+        });
+      }
     } catch (e: any) {
-      console.error('[SignUp] erro:', e);
-      await Swal.fire({ icon: 'error', title: 'Falha no cadastro', text: e?.message || 'Tente novamente.' });
+      console.error('[SignUp] ===== ERRO NO SUBMIT =====');
+      console.error('🚨 Erro:', e);
+      console.error('📝 Mensagem:', e.message);
+      
+      const errorMsg = e?.message || 'Erro inesperado. Tente novamente.';
+      this.error = errorMsg;
+      await Swal.fire({ 
+        icon: 'error', 
+        title: 'Falha no cadastro', 
+        text: errorMsg 
+      });
     } finally {
       this.loading = false;
+      console.log('[SignUp] ===== SUBMIT FINALIZADO =====');
     }
   }
 
