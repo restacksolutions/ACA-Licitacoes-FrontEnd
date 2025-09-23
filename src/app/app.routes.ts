@@ -24,6 +24,9 @@ import { CompanyComponent } from './pages/company/company.component';
 import { SignInComponent } from './pages/auth-pages/sign-in/sign-in.component';
 import { SignUpComponent } from './pages/auth-pages/sign-up/sign-up.component';
 
+// Test component
+import { TestRoutesComponent } from './test-routes.component';
+
 export const routes: Routes = [
   // Área autenticada — tudo dentro deste layout é protegido
   {
@@ -119,6 +122,13 @@ export const routes: Routes = [
     component: SignUpComponent, 
     title: 'Cadastro - Sistema de Licitações',
     canActivate: [GuestGuard]
+  },
+
+  // Test route (pública)
+  { 
+    path: 'test', 
+    component: TestRoutesComponent, 
+    title: 'Teste de Rotas - Sistema de Licitações'
   },
 
   // Fallback

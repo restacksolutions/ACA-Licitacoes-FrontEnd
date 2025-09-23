@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError, of } from 'rxjs';
-import { delay, catchError, map } from 'rxjs/operators';
+import { delay, catchError, map, switchMap } from 'rxjs/operators';
+import { ApiService } from '../../core/services/api.service';
 
 // ===== INTERFACES =====
 
@@ -102,50 +103,75 @@ export class CompanyService {
   private readonly membersEndpoint = `${this.apiUrl}/company/members`;
   private readonly documentsEndpoint = `${this.apiUrl}/company/documents`;
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private apiService: ApiService) { }
 
   // ===== MÉTODOS DA EMPRESA =====
   
   getCompanyInfo(): Observable<Company> {
-    // TODO: Implementar chamada real para API quando o backend estiver pronto
-    // return this.http.get<ApiResponse<Company>>(`${this.companyEndpoint}`)
-    //   .pipe(
-    //     map(response => response.data),
-    //     catchError(this.handleError)
-    //   );
-
-    // Mock data para desenvolvimento
-    const mockCompany: Company = {
-      id: '1',
-      name: 'ACA Licitações',
-      cnpj: '12.345.678/0001-90',
-      legal_name: 'ACA Licitações Ltda',
-      state_registration: '123.456.789.012',
-      municipal_registration: '123456789',
-      phone: '(11) 99999-9999',
-      address: 'Rua das Flores, 123 - Centro - São Paulo/SP - 01234-567',
-      email: 'contato@empresaexemplo.com.br',
-      logo_path: '/assets/images/company-logo.png',
-      letterhead_path: '/assets/images/company-letterhead.png',
-      active: true,
-      created_by: 'user-1',
-      created_at: '2024-01-15T10:00:00Z'
-    };
-
-    return of(mockCompany).pipe(delay(500));
+    // Usa a API do backend para obter informações da empresa
+    return this.apiService.getCompanies().pipe(
+      map(companies => {
+        if (companies.length > 0) {
+          const company = companies[0];
+          return {
+            id: company.id,
+            name: company.name,
+            cnpj: company.cnpj,
+            legal_name: company.name,
+            state_registration: '',
+            municipal_registration: '',
+            phone: company.phone || '',
+            address: company.address || '',
+            email: '',
+            logo_path: company.logoPath || '',
+            letterhead_path: company.letterheadPath || '',
+            active: company.active,
+            created_by: company.createdBy || '',
+            created_at: company.createdAt
+          };
+        }
+        throw new Error('Nenhuma empresa encontrada');
+      }),
+      catchError(this.handleError)
+    );
   }
 
   updateCompanyInfo(data: CompanyUpdateData): Observable<Company> {
-    // TODO: Implementar chamada real para API quando o backend estiver pronto
-    // return this.http.put<ApiResponse<Company>>(`${this.companyEndpoint}`, data)
-    //   .pipe(
-    //     map(response => response.data),
-    //     catchError(this.handleError)
-    //   );
-
-    // Mock data para desenvolvimento
-    console.log('Atualizando informações da empresa:', data);
-    return this.getCompanyInfo();
+    // Usa a API do backend para atualizar informações da empresa
+    return this.apiService.getCompanies().pipe(
+      switchMap(companies => {
+        if (companies.length > 0) {
+          const companyId = companies[0].id;
+          const updateData = {
+            name: data.name,
+            phone: data.phone,
+            address: data.address,
+            logoPath: data.logo_path,
+            letterheadPath: data.letterhead_path,
+            active: data.active
+          };
+          return this.apiService.updateCompany(companyId, updateData);
+        }
+        throw new Error('Nenhuma empresa encontrada');
+      }),
+      map(updatedCompany => ({
+        id: updatedCompany.id,
+        name: updatedCompany.name,
+        cnpj: updatedCompany.cnpj,
+        legal_name: updatedCompany.name,
+        state_registration: '',
+        municipal_registration: '',
+        phone: updatedCompany.phone || '',
+        address: updatedCompany.address || '',
+        email: '',
+        logo_path: updatedCompany.logoPath || '',
+        letterhead_path: updatedCompany.letterheadPath || '',
+        active: updatedCompany.active,
+        created_by: updatedCompany.createdBy || '',
+        created_at: updatedCompany.createdAt
+      })),
+      catchError(this.handleError)
+    );
   }
 
   uploadCompanyLogo(file: File): Observable<{ logo_path: string }> {
@@ -181,186 +207,132 @@ export class CompanyService {
   // ===== MÉTODOS DE FUNCIONÁRIOS =====
 
   getCompanyMembers(): Observable<CompanyMember[]> {
-    // TODO: Implementar chamada real para API quando o backend estiver pronto
-    // return this.http.get<ApiResponse<CompanyMember[]>>(`${this.membersEndpoint}`)
-    //   .pipe(
-    //     map(response => response.data),
-    //     catchError(this.handleError)
-    //   );
-
-    // Mock data para desenvolvimento
-    const mockMembers: CompanyMember[] = [
-      {
-        id: '1',
-        company_id: '1',
-        user_id: 'user-1',
-        role: 'admin',
-        name: 'João Silva',
-        email: 'joao@empresa.com',
-        created_at: '2023-01-15',
-        user: {
-          id: 'user-1',
-          full_name: 'João Silva',
-          email: 'joao@empresa.com'
+    // Usa a API do backend para obter membros da empresa
+    return this.apiService.getCompanies().pipe(
+      switchMap(companies => {
+        if (companies.length > 0) {
+          const companyId = companies[0].id;
+          return this.apiService.getCompanyMembers(companyId);
         }
-      },
-      {
-        id: '2',
-        company_id: '1',
-        user_id: 'user-2',
-        role: 'member',
-        name: 'Maria Santos',
-        email: 'maria@empresa.com',
-        created_at: '2023-02-01',
+        throw new Error('Nenhuma empresa encontrada');
+      }),
+      map(members => members.map(member => ({
+        id: member.id,
+        company_id: member.companyId || '',
+        user_id: member.userId || '',
+        role: member.role as 'admin' | 'member',
+        name: member.userFullName || '',
+        email: member.userEmail || '',
+        created_at: member.createdAt,
         user: {
-          id: 'user-2',
-          full_name: 'Maria Santos',
-          email: 'maria@empresa.com'
+          id: member.userId || '',
+          full_name: member.userFullName || '',
+          email: member.userEmail || ''
         }
-      },
-      {
-        id: '3',
-        company_id: '1',
-        user_id: 'user-3',
-        role: 'member',
-        name: 'Pedro Oliveira',
-        email: 'pedro@empresa.com',
-        created_at: '2023-03-01',
-        user: {
-          id: 'user-3',
-          full_name: 'Pedro Oliveira',
-          email: 'pedro@empresa.com'
-        }
-      }
-    ];
-
-    return of(mockMembers).pipe(delay(500));
+      }))),
+      catchError(this.handleError)
+    );
   }
 
   addMember(email: string, role: 'admin' | 'member'): Observable<CompanyMember> {
-    // TODO: Implementar chamada real para API quando o backend estiver pronto
-    // return this.http.post<ApiResponse<CompanyMember>>(`${this.membersEndpoint}`, { email, role })
-    //   .pipe(
-    //     map(response => response.data),
-    //     catchError(this.handleError)
-    //   );
-
-    // Mock data para desenvolvimento
-    console.log('Adicionando membro:', { email, role });
-    const newMember: CompanyMember = {
-      id: `member-${Date.now()}`,
-      company_id: '1',
-      user_id: `user-${Date.now()}`,
-      role,
-      name: 'Novo Usuário',
-      email,
-      created_at: new Date().toISOString(),
-      user: {
-        id: `user-${Date.now()}`,
-        full_name: 'Novo Usuário',
-        email
-      }
-    };
-    return of(newMember).pipe(delay(500));
+    // Usa a API do backend para adicionar membro
+    return this.apiService.getCompanies().pipe(
+      switchMap(companies => {
+        if (companies.length > 0) {
+          const companyId = companies[0].id;
+          return this.apiService.inviteMember(companyId, { email, role });
+        }
+        throw new Error('Nenhuma empresa encontrada');
+      }),
+      map(member => ({
+        id: member.id,
+        company_id: member.companyId || '',
+        user_id: member.userId || '',
+        role: member.role as 'admin' | 'member',
+        name: member.userFullName || '',
+        email: member.userEmail || '',
+        created_at: member.createdAt,
+        user: {
+          id: member.userId || '',
+          full_name: member.userFullName || '',
+          email: member.userEmail || ''
+        }
+      })),
+      catchError(this.handleError)
+    );
   }
 
   updateMemberRole(memberId: string, role: 'admin' | 'member'): Observable<CompanyMember> {
-    // TODO: Implementar chamada real para API quando o backend estiver pronto
-    // return this.http.put<ApiResponse<CompanyMember>>(`${this.membersEndpoint}/${memberId}`, { role })
-    //   .pipe(
-    //     map(response => response.data),
-    //     catchError(this.handleError)
-    //   );
-
-    // Mock data para desenvolvimento
-    console.log('Atualizando role do membro:', { memberId, role });
-    const mockUpdatedMember: CompanyMember = {
-      id: memberId,
-      company_id: '1',
-      user_id: 'user-id',
-      role,
-      name: 'Usuário Atualizado',
-      email: 'usuario@empresa.com',
-      created_at: '2023-01-01',
-      user: {
-        id: 'user-id',
-        full_name: 'Usuário Atualizado',
-        email: 'usuario@empresa.com'
-      }
-    };
-    return of(mockUpdatedMember).pipe(delay(500));
+    // Usa a API do backend para atualizar role do membro
+    return this.apiService.getCompanies().pipe(
+      switchMap(companies => {
+        if (companies.length > 0) {
+          const companyId = companies[0].id;
+          return this.apiService.updateMember(companyId, memberId, { role });
+        }
+        throw new Error('Nenhuma empresa encontrada');
+      }),
+      map(member => ({
+        id: member.id,
+        company_id: member.companyId || '',
+        user_id: member.userId || '',
+        role: member.role as 'admin' | 'member',
+        name: member.userFullName || '',
+        email: member.userEmail || '',
+        created_at: member.createdAt,
+        user: {
+          id: member.userId || '',
+          full_name: member.userFullName || '',
+          email: member.userEmail || ''
+        }
+      })),
+      catchError(this.handleError)
+    );
   }
 
   removeMember(memberId: string): Observable<{ success: boolean }> {
-    // TODO: Implementar chamada real para API quando o backend estiver pronto
-    // return this.http.delete<ApiResponse<{ success: boolean }>>(`${this.membersEndpoint}/${memberId}`)
-    //   .pipe(
-    //     map(response => response.data),
-    //     catchError(this.handleError)
-    //   );
-
-    // Mock data para desenvolvimento
-    console.log('Removendo membro:', memberId);
-    return of({ success: true }).pipe(delay(500));
+    // Usa a API do backend para remover membro
+    return this.apiService.getCompanies().pipe(
+      switchMap(companies => {
+        if (companies.length > 0) {
+          const companyId = companies[0].id;
+          return this.apiService.removeMember(companyId, memberId);
+        }
+        throw new Error('Nenhuma empresa encontrada');
+      }),
+      map(() => ({ success: true })),
+      catchError(this.handleError)
+    );
   }
 
   // ===== MÉTODOS DE DOCUMENTOS =====
 
   getCompanyDocuments(): Observable<CompanyDocument[]> {
-    // TODO: Implementar chamada real para API quando o backend estiver pronto
-    // return this.http.get<ApiResponse<CompanyDocument[]>>(`${this.documentsEndpoint}`)
-    //   .pipe(
-    //     map(response => response.data),
-    //     catchError(this.handleError)
-    //   );
-
-    // Mock data para desenvolvimento
-    const mockDocuments: CompanyDocument[] = [
-      {
-        id: '1',
-        company_id: '1',
-        doc_type: 'cnpj',
-        doc_number: '12.345.678/0001-90',
-        issuer: 'Receita Federal',
-        issue_date: '2020-01-15',
-        expires_at: '2030-01-15',
-        file_path: '/documents/cnpj.pdf',
-        notes: 'CNPJ principal da empresa',
-        version: 1,
-        created_at: '2024-01-15T10:00:00Z',
-        updated_at: '2024-01-15T10:00:00Z'
-      },
-      {
-        id: '2',
-        company_id: '1',
-        doc_type: 'inscricao_estadual',
-        doc_number: '123.456.789.012',
-        issuer: 'Sefaz-SP',
-        issue_date: '2020-02-01',
-        expires_at: '2025-02-01',
-        file_path: '/documents/ie.pdf',
-        notes: 'Inscrição Estadual de SP',
-        version: 1,
-        created_at: '2024-01-15T10:00:00Z',
-        updated_at: '2024-01-15T10:00:00Z'
-      },
-      {
-        id: '3',
-        company_id: '1',
-        doc_type: 'certificado_digital',
-        doc_number: 'CERT123456789',
-        issuer: 'Certificadora Digital',
-        issue_date: '2023-06-01',
-        expires_at: '2024-06-01',
-        file_path: '/documents/certificado.p12',
-        notes: 'Certificado digital A1',
-        version: 2,
-        created_at: '2024-01-15T10:00:00Z',
-        updated_at: '2024-01-15T10:00:00Z'
-      }
-    ];
-
-    return of(mockDocuments).pipe(delay(500));
+    // Usa a API do backend para obter documentos da empresa
+    return this.apiService.getCompanies().pipe(
+      switchMap(companies => {
+        if (companies.length > 0) {
+          const companyId = companies[0].id;
+          return this.apiService.getDocuments(companyId);
+        }
+        throw new Error('Nenhuma empresa encontrada');
+      }),
+      map(documents => documents.map(doc => ({
+        id: doc.id,
+        company_id: doc.companyId || '',
+        doc_type: doc.docType as any,
+        doc_number: doc.docNumber || '',
+        issuer: doc.issuer || '',
+        issue_date: doc.issueDate || null,
+        expires_at: doc.expiresAt || '',
+        file_path: doc.filePath || null,
+        notes: doc.notes || '',
+        version: doc.version || 1,
+        created_at: doc.createdAt || null,
+        updated_at: doc.updatedAt || null
+      }))),
+      catchError(this.handleError)
+    );
   }
 
   getMissingDocuments(): Observable<CompanyDocument[]> {
@@ -466,33 +438,47 @@ export class CompanyService {
   }
 
   uploadDocument(file: File, documentData: DocumentUpdateData): Observable<CompanyDocument> {
-    // TODO: Implementar upload real para API quando o backend estiver pronto
-    // const formData = new FormData();
-    // formData.append('file', file);
-    // formData.append('data', JSON.stringify(documentData));
-    // return this.http.post<ApiResponse<CompanyDocument>>(`${this.documentsEndpoint}/upload`, formData)
-    //   .pipe(
-    //     map(response => response.data),
-    //     catchError(this.handleError)
-    //   );
-
-    // Mock data para desenvolvimento
-    console.log('Fazendo upload de documento:', { fileName: file.name, documentData });
-    const newDocument: CompanyDocument = {
-      id: `doc-${Date.now()}`,
-      company_id: '1',
-      doc_type: documentData.doc_type as any,
-      doc_number: documentData.doc_number || '',
-      issuer: documentData.issuer || '',
-      issue_date: documentData.issue_date || new Date().toISOString().split('T')[0],
-      expires_at: documentData.expires_at || '',
-      file_path: `/documents/${file.name}`,
-      notes: documentData.notes,
-      version: 1,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-    return of(newDocument).pipe(delay(1000));
+    // Usa a API do backend para fazer upload de documento
+    return this.apiService.getCompanies().pipe(
+      switchMap(companies => {
+        if (companies.length > 0) {
+          const companyId = companies[0].id;
+          // Primeiro cria o documento
+          const createData = {
+            docType: documentData.doc_type,
+            docNumber: documentData.doc_number || '',
+            issuer: documentData.issuer || '',
+            issueDate: documentData.issue_date || new Date().toISOString().split('T')[0],
+            expiresAt: documentData.expires_at || '',
+            notes: documentData.notes || ''
+          };
+          return this.apiService.createDocument(companyId, createData).pipe(
+            switchMap(createdDoc => {
+              // Depois faz upload do arquivo
+              return this.apiService.uploadDocument(companyId, createdDoc.id, file).pipe(
+                map(() => createdDoc)
+              );
+            })
+          );
+        }
+        throw new Error('Nenhuma empresa encontrada');
+      }),
+      map(doc => ({
+        id: doc.id,
+        company_id: doc.companyId || '',
+        doc_type: doc.docType as any,
+        doc_number: doc.docNumber || '',
+        issuer: doc.issuer || '',
+        issue_date: doc.issueDate || null,
+        expires_at: doc.expiresAt || '',
+        file_path: doc.filePath || null,
+        notes: doc.notes || '',
+        version: doc.version || 1,
+        created_at: doc.createdAt || null,
+        updated_at: doc.updatedAt || null
+      })),
+      catchError(this.handleError)
+    );
   }
 
   updateDocument(documentId: string, data: DocumentUpdateData): Observable<CompanyDocument> {

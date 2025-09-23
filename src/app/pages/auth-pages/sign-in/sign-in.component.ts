@@ -34,28 +34,25 @@ export class SignInComponent implements OnInit {
 
     this.loading = true;
 
-    // fallback: força /dashboard em 2.5s se algo travar
-    const fallback = setTimeout(() => {
-      console.warn('[SignIn] fallback → /dashboard');
-      this.forceDashboard();
-    }, 2500);
-
     try {
       const ok = await firstValueFrom(this.auth.login(this.email, this.password));
       console.log('[SignIn] result:', ok);
 
       if (ok) {
-        await Swal.fire({ icon: 'success', title: 'Login realizado!', timer: 1000, showConfirmButton: false });
-        await this.forceDashboard();
+        await Swal.fire({ 
+          icon: 'success', 
+          title: 'Login realizado!', 
+          text: 'Você foi autenticado com sucesso.',
+          showConfirmButton: true
+        });
+        // Removido redirecionamento automático
       } else {
         const msg = this.auth.getLastError() || 'E-mail ou senha incorretos.';
         await Swal.fire({ icon: 'error', title: 'Não foi possível entrar', text: msg });
-        clearTimeout(fallback);
       }
     } catch (e: any) {
       console.error('[SignIn] erro:', e);
       await Swal.fire({ icon: 'error', title: 'Erro no login', text: 'Tente novamente.' });
-      clearTimeout(fallback);
     } finally {
       this.loading = false;
     }
@@ -113,15 +110,4 @@ export class SignInComponent implements OnInit {
     });
   }
 
-  private async forceDashboard() {
-    try {
-      const ok = await this.router.navigate(['/dashboard'], { replaceUrl: true });
-      if (ok) return;
-      const ok2 = await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
-      if (ok2) return;
-      window.location.assign('/dashboard');
-    } catch {
-      window.location.assign('/dashboard');
-    }
-  }
 }

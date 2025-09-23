@@ -1,44 +1,49 @@
-import { Injectable } from '@angular/core';
-import {
-  HttpRequest,
-  HttpHandler,
-  HttpEvent,
-  HttpInterceptor,
-  HttpErrorResponse
-} from '@angular/common/http';
+import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
+import { inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
-import { catchError, switchMap } from 'rxjs/operators';
-import { AuthService } from '../services/auth.service';
+import { catchError, tap } from 'rxjs/operators';
+import { AuthService } from '../../pages/auth-pages/auth.service';
 import { Router } from '@angular/router';
 
-@Injectable()
-export class AuthInterceptor implements HttpInterceptor {
+export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
 
-  constructor(
-    private authService: AuthService,
-    private router: Router
-  ) {}
+  console.log('[AuthInterceptor] Interceptando requisição:', req.url);
 
-  intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
+  // Não adicionar token para requisições de autenticação
+  const isAuthRequest = req.url.includes('/auth/login') || req.url.includes('/auth/register');
+  
+  if (!isAuthRequest) {
     // Adicionar token de autorização se disponível
-    const token = this.authService.getToken();
+    const token = authService.getToken();
     if (token) {
-      request = request.clone({
+      console.log('[AuthInterceptor] Adicionando token de autorização');
+      req = req.clone({
         setHeaders: {
           Authorization: `Bearer ${token}`
         }
       });
+    } else {
+      console.log('[AuthInterceptor] Nenhum token disponível');
     }
-
-    return next.handle(request).pipe(
-      catchError((error: HttpErrorResponse) => {
-        if (error.status === 401) {
-          // Token expirado ou inválido
-          this.authService.logout();
-          this.router.navigate(['/login']);
-        }
-        return throwError(() => error);
-      })
-    );
+  } else {
+    console.log('[AuthInterceptor] Requisição de autenticação, não adicionando token');
   }
-}
+
+  return next(req).pipe(
+    tap(response => {
+      console.log('[AuthInterceptor] Resposta recebida:', response);
+    }),
+    catchError((error: HttpErrorResponse) => {
+      console.error('[AuthInterceptor] Erro na requisição:', error);
+      if (error.status === 401 && !isAuthRequest) {
+        // Token expirado ou inválido (apenas para requisições não-auth)
+        console.log('[AuthInterceptor] Token expirado, fazendo logout');
+        authService.logout();
+        // Removido redirecionamento automático
+      }
+      return throwError(() => error);
+    })
+  );
+};

@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, from, of } from 'rxjs';
-import { catchError, map, mergeMap } from 'rxjs/operators';
+import { catchError, map, mergeMap, switchMap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { supabase } from '../../core/supa';
+import { ApiService, LoginRequest, RegisterRequest, AuthResponse } from '../../core/services/api.service';
 
 export interface User {
   id: string;          // app_users.id ou fallback
@@ -20,7 +21,7 @@ export class AuthService {
   private lastErrorMessage = '';
   getLastError() { return this.lastErrorMessage; }
 
-  constructor(private router: Router) {
+  constructor(private router: Router, private apiService: ApiService) {
     // sessão inicial
     supabase.auth.getSession().then(async ({ data }) => {
       const session = data.session;
@@ -49,51 +50,42 @@ export class AuthService {
     }
   }
 
-  /** LOGIN: sucesso => true, falha => false; tolerante a falhas de perfil */
+  /** LOGIN: sucesso => true, falha => false; usa API do backend */
   login(email: string, password: string): Observable<boolean> {
-    return from(supabase.auth.signInWithPassword({ email, password })).pipe(
-      mergeMap(async ({ data, error }) => {
-        console.log('[AuthService.login] result', { hasSession: !!data?.session, err: error?.message || null });
-        if (error) throw error;
-        if (data.session?.access_token) localStorage.setItem('access_token', data.session.access_token);
+    console.log('[AuthService.login] Iniciando login para:', email);
+    const loginRequest: LoginRequest = { email, password };
+    
+    return this.apiService.login(loginRequest).pipe(
+      switchMap((authResponse: AuthResponse) => {
+        console.log('[AuthService.login] API response recebida:', authResponse);
+        
+        // Converte resposta da API para formato interno
+        const user: User = {
+          id: authResponse.user.id,
+          email: authResponse.user.email,
+          name: authResponse.user.fullName,
+          role: this.mapApiRoleToUI(authResponse.membership.role),
+          company_id: authResponse.company.id,
+          created_at: authResponse.user.createdAt
+        };
 
-        // carrega perfil (tolerante)
-        try { 
-          await this.loadUserProfile();
-          console.log('[AuthService.login] loadUserProfile concluído com sucesso');
-        }
-        catch (e) {
-          console.warn('[AuthService.login] loadUserProfile falhou, usando perfil básico ADMIN');
-          const basicUser: User = {
-            id: data.user?.id || email,
-            email: data.user?.email || email,
-            name: (data.user?.user_metadata as any)?.full_name || (data.user?.email ?? email),
-            role: 'ADMIN', // SEMPRE ADMIN como padrão
-            company_id: '',
-            created_at: new Date().toISOString(),
-          };
-          console.log('[AuthService.login] Perfil básico criado:', basicUser);
-          localStorage.setItem('current_user', JSON.stringify(basicUser));
-          this.currentUserSubject.next(basicUser);
-        }
-
+        console.log('[AuthService.login] Usuário criado:', user);
+        localStorage.setItem('current_user', JSON.stringify(user));
+        this.currentUserSubject.next(user);
         this.lastErrorMessage = '';
-        return true;
+        
+        return of(true);
       }),
-      map(() => true),
       catchError((err) => {
-        console.error('[AuthService.login] erro:', err);
-        this.lastErrorMessage = this.mapAuthError(err);
+        console.error('[AuthService.login] Erro no login:', err);
+        this.lastErrorMessage = this.mapApiError(err);
         return of(false);
       })
     );
   }
 
   /**
-   * SIGN UP (email verification OFF):
-   * - envia metadata da empresa (trigger no DB cria app_users/companies/company_members)
-   * - sessão vem imediatamente; salvamos token, tentamos perfil (tolerante)
-   * - fazemos signOut e deixamos o componente redirecionar para /login
+   * SIGN UP: usa API do backend
    */
   async signUpAndOnboard(payload: {
     fullName: string; email: string; password: string;
@@ -101,79 +93,63 @@ export class AuthService {
   }): Promise<boolean> {
     console.log('[AuthService.signUpAndOnboard] payload', { ...payload, password: '***' });
 
-    const { data: signUpData, error: e1 } = await supabase.auth.signUp({
+    const registerRequest: RegisterRequest = {
+      fullName: payload.fullName,
       email: payload.email,
       password: payload.password,
-      options: {
-        data: {
-          full_name: payload.fullName,
-          company_name: payload.companyName,
-          cnpj: payload.cnpj ?? null,
-          phone: payload.phone ?? null,
-          address: payload.address ?? null,
-        }
-      },
-    });
-    console.log('[AuthService.signUpAndOnboard] signUp', { hasSession: !!signUpData?.session, err: e1?.message || null });
-    if (e1) throw new Error(this.mapAuthError(e1));
+      companyName: payload.companyName,
+      companyCnpj: payload.cnpj || '',
+      companyPhone: payload.phone || '',
+      companyAddress: payload.address || ''
+    };
 
-    if (!signUpData.session?.access_token) {
-      // com verificação OFF isso não deveria acontecer; trate como erro explícito
-      this.lastErrorMessage = 'Sessão não criada após o cadastro. Revise as configurações do Auth.';
+    try {
+      const authResponse = await this.apiService.register(registerRequest).toPromise();
+      console.log('[AuthService.signUpAndOnboard] API response:', authResponse);
+
+      // Converte resposta da API para formato interno
+      const user: User = {
+        id: authResponse!.user.id,
+        email: authResponse!.user.email,
+        name: authResponse!.user.fullName,
+        role: this.mapApiRoleToUI(authResponse!.membership.role),
+        company_id: authResponse!.company.id,
+        created_at: authResponse!.user.createdAt
+      };
+
+      console.log('[AuthService.signUpAndOnboard] Usuário criado:', user);
+      localStorage.setItem('current_user', JSON.stringify(user));
+      this.currentUserSubject.next(user);
+
+      this.lastErrorMessage = 'Conta criada com sucesso! Faça login para continuar.';
+      return true;
+    } catch (error: any) {
+      console.error('[AuthService.signUpAndOnboard] erro:', error);
+      this.lastErrorMessage = this.mapApiError(error);
       throw new Error(this.lastErrorMessage);
     }
-
-    localStorage.setItem('access_token', signUpData.session.access_token);
-
-    // tenta perfil (tolerante)
-    try { await this.loadUserProfile(); }
-    catch (e) { console.warn('[AuthService.signUpAndOnboard] loadUserProfile falhou (ok):', e); }
-
-    // sai da sessão e deixa o componente redirecionar para /login
-    try { await supabase.auth.signOut(); }
-    catch (e) { console.warn('[AuthService.signUpAndOnboard] signOut falhou:', e); }
-
-    this.lastErrorMessage = 'Conta criada com sucesso! Faça login para continuar.';
-    return true;
   }
 
   logout(): void {
     console.log('[AuthService.logout] Iniciando logout...');
     
+    // Limpa tokens da API
+    this.apiService.clearTokens();
+    
     // Limpa dados do localStorage
-    localStorage.removeItem('access_token');
     localStorage.removeItem('current_user');
     
     // Limpa o estado do usuário
     this.currentUserSubject.next(null);
     
-    // Faz logout do Supabase
-    supabase.auth.signOut().then(() => {
-      console.log('[AuthService.logout] Supabase signOut concluído');
-    }).catch((error) => {
-      console.warn('[AuthService.logout] Erro no signOut do Supabase:', error);
-    });
-    
-    // Redireciona para login
-    this.router.navigate(['/login']).then(() => {
-      console.log('[AuthService.logout] Redirecionamento para /login concluído');
-    }).catch((error) => {
-      console.warn('[AuthService.logout] Erro no redirecionamento:', error);
-      // Fallback: redirecionamento forçado
-      window.location.href = '/login';
-    });
+    // Removido redirecionamento automático
+    console.log('[AuthService.logout] Logout concluído');
   }
 
-  getToken(): string | null { return localStorage.getItem('access_token'); }
+  getToken(): string | null { return this.apiService.getCurrentToken(); }
 
   isLoggedIn(): boolean {
-    const token = this.getToken();
-    let user = this.currentUserSubject.value;
-    const saved = localStorage.getItem('current_user');
-    if (!user && saved) {
-      try { user = JSON.parse(saved); this.currentUserSubject.next(user); } catch {}
-    }
-    return !!token;
+    return this.apiService.isAuthenticated();
   }
 
   getCurrentUser(): User | null { 
@@ -289,6 +265,36 @@ export class AuthService {
       email: email
     });
     if (error) throw error;
+  }
+
+  private mapApiRoleToUI(apiRole: string): User['role'] {
+    switch (apiRole) {
+      case 'owner':
+      case 'admin':
+        return 'ADMIN';
+      case 'member':
+        return 'ANALYST';
+      default:
+        console.log('[AuthService.mapApiRoleToUI] Role não reconhecida:', apiRole, '→ usando ADMIN como padrão');
+        return 'ADMIN';
+    }
+  }
+
+  private mapApiError(err: any): string {
+    const m = String(err?.message || err).toLowerCase();
+    if (/invalid login credentials|invalid credentials/.test(m)) return 'E-mail ou senha incorretos.';
+    if (/confirm|verification/.test(m)) return 'Sua conta precisa ser confirmada.';
+    if (/user already registered|email.*(exists|already)/.test(m)) return 'Este e-mail já está cadastrado.';
+    if (/password.*(weak|short)|password too weak/.test(m)) return 'Senha muito fraca.';
+    if (/rate limit|too many requests/.test(m)) return 'Muitas tentativas. Aguarde alguns minutos.';
+    if (/network|connection|timeout/.test(m)) return 'Erro de conexão. Tente novamente.';
+    if (/dados inválidos/.test(m)) return 'Dados inválidos. Verifique os campos preenchidos.';
+    if (/não autorizado/.test(m)) return 'Não autorizado. Faça login novamente.';
+    if (/acesso negado/.test(m)) return 'Acesso negado. Você não tem permissão para esta ação.';
+    if (/recurso não encontrado/.test(m)) return 'Recurso não encontrado.';
+    if (/conflito.*email.*cnpj.*já existe/.test(m)) return 'E-mail ou CNPJ já cadastrado.';
+    if (/erro interno do servidor/.test(m)) return 'Erro interno do servidor. Tente novamente.';
+    return 'Falha na autenticação.';
   }
 
   private mapAuthError(err: any): string {

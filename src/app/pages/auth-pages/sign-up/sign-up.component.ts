@@ -47,12 +47,6 @@ export class SignUpComponent implements OnInit {
 
     this.loading = true;
 
-    // fallback: força /login em 3s se algo travar
-    const fallback = setTimeout(() => {
-      console.warn('[SignUp] fallback → /login');
-      this.forceLogin();
-    }, 3000);
-
     try {
       const ok = await this.auth.signUpAndOnboard({
         fullName: this.name,
@@ -67,33 +61,20 @@ export class SignUpComponent implements OnInit {
 
       await Swal.fire({
         icon: 'success',
-        title: 'Conta criada',
-        text: this.auth.getLastError() || 'Faça login para continuar.',
-        timer: 1500,
-        showConfirmButton: false
+        title: 'Conta criada com sucesso!',
+        text: 'Sua conta foi criada. Agora você pode fazer login.',
+        showConfirmButton: true
       });
 
-      await this.forceLogin();
+      // Removido redirecionamento automático
     } catch (e: any) {
       console.error('[SignUp] erro:', e);
       await Swal.fire({ icon: 'error', title: 'Falha no cadastro', text: e?.message || 'Tente novamente.' });
     } finally {
-      clearTimeout(fallback);
       this.loading = false;
     }
   }
 
   onSignIn() { this.router.navigate(['/login']); }
 
-  private async forceLogin() {
-    try {
-      const ok = await this.router.navigate(['/login'], { replaceUrl: true });
-      if (ok) return;
-      const ok2 = await this.router.navigateByUrl('/login', { replaceUrl: true });
-      if (ok2) return;
-      window.location.assign('/login');
-    } catch {
-      window.location.assign('/login');
-    }
-  }
 }
