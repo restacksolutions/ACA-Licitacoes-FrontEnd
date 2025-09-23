@@ -57,7 +57,15 @@ export class ApiService {
   private tokenSubject = new BehaviorSubject<string | null>(this.getStoredToken());
   public token$ = this.tokenSubject.asObservable();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    console.log('🏗️ [ApiService] ===== INICIALIZANDO API SERVICE =====');
+    console.log('🌐 API Base URL configurada:', this.apiBaseUrl);
+    console.log('🔧 HttpClient injetado:', !!this.http);
+    console.log('📋 Configuração do ambiente:', {
+      production: false,
+      apiBaseUrl: this.apiBaseUrl
+    });
+  }
 
   private getStoredToken(): string | null {
     return localStorage.getItem('access_token');
@@ -65,10 +73,19 @@ export class ApiService {
 
   private getHeaders(): HttpHeaders {
     const token = this.tokenSubject.value;
-    return new HttpHeaders({
+    console.log('📋 [ApiService.getHeaders] ===== CRIANDO HEADERS =====');
+    console.log('🔑 Token disponível?', token ? 'Sim' : 'Não');
+    if (token) {
+      console.log('🔑 Token (primeiros 20 chars):', token.substring(0, 20) + '...');
+    }
+    
+    const headers = new HttpHeaders({
       'Content-Type': 'application/json',
       ...(token && { 'Authorization': `Bearer ${token}` })
     });
+    
+    console.log('📋 Headers criados:', headers);
+    return headers;
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {
@@ -108,21 +125,39 @@ export class ApiService {
 
   // Métodos de autenticação
   login(credentials: LoginRequest): Observable<AuthResponse> {
-    console.log('[ApiService.login] Iniciando login:', { email: credentials.email, apiUrl: this.apiBaseUrl });
+    console.log('🔐 [ApiService.login] ===== INICIANDO LOGIN =====');
+    console.log('📧 Email:', credentials.email);
+    console.log('🌐 API Base URL:', this.apiBaseUrl);
+    console.log('🔗 URL completa:', `${this.apiBaseUrl}/auth/login`);
+    console.log('📦 Dados enviados:', credentials);
     
     // Criar headers manualmente para evitar problemas com interceptor
     const headers = new HttpHeaders({
       'Content-Type': 'application/json'
     });
     
+    console.log('📋 Headers criados:', headers);
+    console.log('🚀 Enviando requisição POST...');
+    
     return this.http.post<AuthResponse>(`${this.apiBaseUrl}/auth/login`, credentials, { headers })
       .pipe(
         tap(response => {
-          console.log('[ApiService.login] Resposta recebida:', response);
+          console.log('✅ [ApiService.login] ===== RESPOSTA RECEBIDA =====');
+          console.log('📊 Status da resposta:', response);
+          console.log('🔑 Access Token:', response.access_token ? 'Presente' : 'Ausente');
+          console.log('🔄 Refresh Token:', response.refresh_token ? 'Presente' : 'Ausente');
+          console.log('👤 User:', response.user);
           this.setTokens(response.access_token, response.refresh_token);
+          console.log('💾 Tokens salvos no localStorage');
         }),
         catchError(error => {
-          console.error('[ApiService.login] Erro na requisição:', error);
+          console.error('❌ [ApiService.login] ===== ERRO NA REQUISIÇÃO =====');
+          console.error('🚨 Tipo do erro:', error.constructor.name);
+          console.error('📊 Status HTTP:', error.status);
+          console.error('📝 Mensagem:', error.message);
+          console.error('🔍 Detalhes do erro:', error);
+          console.error('🌐 URL que falhou:', error.url);
+          console.error('📋 Headers da resposta:', error.headers);
           return this.handleError(error);
         })
       );
@@ -255,8 +290,27 @@ export class ApiService {
 
   // Métodos de health check
   healthCheck(): Observable<any> {
+    console.log('🏥 [ApiService.healthCheck] ===== INICIANDO HEALTH CHECK =====');
+    console.log('🌐 API Base URL:', this.apiBaseUrl);
+    console.log('🔗 URL completa:', `${this.apiBaseUrl}/health`);
+    console.log('🚀 Enviando requisição GET...');
+    
     return this.http.get(`${this.apiBaseUrl}/health`)
-      .pipe(catchError(this.handleError));
+      .pipe(
+        tap(response => {
+          console.log('✅ [ApiService.healthCheck] ===== RESPOSTA RECEBIDA =====');
+          console.log('📊 Status da resposta:', response);
+        }),
+        catchError(error => {
+          console.error('❌ [ApiService.healthCheck] ===== ERRO NA REQUISIÇÃO =====');
+          console.error('🚨 Tipo do erro:', error.constructor.name);
+          console.error('📊 Status HTTP:', error.status);
+          console.error('📝 Mensagem:', error.message);
+          console.error('🔍 Detalhes do erro:', error);
+          console.error('🌐 URL que falhou:', error.url);
+          return this.handleError(error);
+        })
+      );
   }
 
   databaseHealthCheck(): Observable<any> {
@@ -266,9 +320,19 @@ export class ApiService {
 
   // Gerenciamento de tokens
   setTokens(accessToken: string, refreshToken: string): void {
+    console.log('💾 [ApiService.setTokens] ===== SALVANDO TOKENS =====');
+    console.log('🔑 Access Token (primeiros 20 chars):', accessToken.substring(0, 20) + '...');
+    console.log('🔄 Refresh Token (primeiros 20 chars):', refreshToken.substring(0, 20) + '...');
+    
     localStorage.setItem('access_token', accessToken);
     localStorage.setItem('refresh_token', refreshToken);
     this.tokenSubject.next(accessToken);
+    
+    console.log('✅ Tokens salvos no localStorage e BehaviorSubject atualizado');
+    console.log('🔍 Verificando localStorage:', {
+      access_token: localStorage.getItem('access_token') ? 'Presente' : 'Ausente',
+      refresh_token: localStorage.getItem('refresh_token') ? 'Presente' : 'Ausente'
+    });
   }
 
   clearTokens(): void {
