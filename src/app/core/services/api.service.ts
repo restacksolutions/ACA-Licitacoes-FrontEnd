@@ -242,12 +242,17 @@ export class ApiService {
       .pipe(catchError(this.handleError));
   }
 
+  addMember(companyId: string, memberData: { email: string; role: string }): Observable<any> {
+    return this.http.post(`${this.apiBaseUrl}/companies/${companyId}/members`, memberData, { headers: this.getHeaders() })
+      .pipe(catchError(this.handleError));
+  }
+
   inviteMember(companyId: string, memberData: { email: string; role: string }): Observable<any> {
     return this.http.post(`${this.apiBaseUrl}/companies/${companyId}/members`, memberData, { headers: this.getHeaders() })
       .pipe(catchError(this.handleError));
   }
 
-  updateMember(companyId: string, memberId: string, memberData: { role: string }): Observable<any> {
+  updateMember(companyId: string, memberId: string, memberData: { role: string; password?: string }): Observable<any> {
     return this.http.patch(`${this.apiBaseUrl}/companies/${companyId}/members/${memberId}`, memberData, { headers: this.getHeaders() })
       .pipe(catchError(this.handleError));
   }

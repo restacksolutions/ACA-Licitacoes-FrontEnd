@@ -27,7 +27,7 @@ export interface CompanyMember {
   id: string;
   company_id: string;
   user_id: string;
-  role: 'admin' | 'member';
+  role: 'admin' | 'member' | 'owner';
   name?: string;
   email: string;
   created_at: string;
@@ -307,6 +307,108 @@ export class CompanyService {
 
   // ===== MÉTODOS DE FUNCIONÁRIOS =====
 
+  // Criar usuário e adicionar como membro
+  createUserAndAddMember(memberData: any): Observable<any> {
+    console.log('[CompanyService.createUserAndAddMember] ===== CRIANDO USUÁRIO E ADICIONANDO COMO MEMBRO =====');
+    console.log('[CompanyService.createUserAndAddMember] Dados do membro:', memberData);
+    
+    // Primeiro, obter os dados da empresa atual
+    return this.apiService.getCompanies().pipe(
+      switchMap(companies => {
+        console.log('[CompanyService.createUserAndAddMember] Empresas encontradas:', companies);
+        
+        if (companies.length === 0) {
+          throw new Error('Nenhuma empresa encontrada para adicionar membro');
+        }
+        
+        const companyData = companies[0];
+        const company = companyData.company || companyData;
+        console.log('[CompanyService.createUserAndAddMember] Dados da empresa atual:', company);
+        
+        // Criar o usuário com os dados da empresa atual
+        const userData = {
+          fullName: memberData.name,
+          email: memberData.email,
+          password: memberData.password,
+          companyName: company.name || 'Empresa',
+          companyCnpj: company.cnpj || '',
+          companyPhone: company.phone || '',
+          companyAddress: company.address || ''
+        };
+        
+        console.log('[CompanyService.createUserAndAddMember] Dados do usuário com empresa atual:', userData);
+        
+        return this.apiService.register(userData).pipe(
+          switchMap((authResponse: any) => {
+            console.log('[CompanyService.createUserAndAddMember] Usuário criado com sucesso:', authResponse);
+            
+            // Agora adicionar como membro da empresa
+            const companyId = company.id;
+            console.log('[CompanyService.createUserAndAddMember] Adicionando como membro da empresa:', companyId);
+            
+            const memberDataForApi = {
+              email: userData.email,
+              role: memberData.role
+            };
+            
+            return this.apiService.addMember(companyId, memberDataForApi);
+          })
+        );
+      }),
+      catchError(error => {
+        console.error('[CompanyService.createUserAndAddMember] Erro:', error);
+        return this.handleError(error);
+      })
+    );
+  }
+
+  // Atualizar membro existente
+  updateMember(memberId: string, memberData: any): Observable<CompanyMember> {
+    console.log('[CompanyService.updateMember] ===== ATUALIZANDO MEMBRO =====');
+    console.log('[CompanyService.updateMember] ID do membro:', memberId);
+    console.log('[CompanyService.updateMember] Dados do membro:', memberData);
+    
+    return this.apiService.getCompanies().pipe(
+      switchMap(companies => {
+        if (companies.length > 0) {
+          const companyData = companies[0];
+          const company = companyData.company || companyData;
+          const companyId = company.id;
+          
+          console.log('[CompanyService.updateMember] ID da empresa:', companyId);
+          
+          const updateData: any = {
+            role: memberData.role
+          };
+          
+          // Incluir senha apenas se fornecida
+          if (memberData.password && memberData.password.trim()) {
+            updateData.password = memberData.password;
+          }
+          
+          return this.apiService.updateMember(companyId, memberId, updateData);
+        }
+        throw new Error('Nenhuma empresa encontrada');
+      }),
+      map(updatedMember => {
+        console.log('[CompanyService.updateMember] Membro atualizado:', updatedMember);
+        return {
+          id: updatedMember.id,
+          company_id: updatedMember.company_id,
+          user_id: updatedMember.user_id,
+          name: memberData.name,
+          email: memberData.email,
+          role: updatedMember.role,
+          created_at: updatedMember.created_at
+        };
+      }),
+      catchError(error => {
+        console.error('[CompanyService.updateMember] Erro:', error);
+        return this.handleError(error);
+      })
+    );
+  }
+
   getCompanyMembers(): Observable<CompanyMember[]> {
     // Usa a API do backend para obter membros da empresa
     return this.apiService.getCompanies().pipe(
@@ -326,20 +428,29 @@ export class CompanyService {
       }),
       map(members => {
         console.log('[CompanyService.getCompanyMembers] Membros recebidos:', members);
-        return members.map(member => ({
-          id: member.id,
-          company_id: member.companyId || '',
-          user_id: member.userId || '',
-          role: member.role as 'admin' | 'member',
-          name: member.userFullName || '',
-          email: member.userEmail || '',
-          created_at: member.createdAt,
-          user: {
-            id: member.userId || '',
-            full_name: member.userFullName || '',
-            email: member.userEmail || ''
-          }
-        }));
+        console.log('[CompanyService.getCompanyMembers] Estrutura dos dados:', JSON.stringify(members, null, 2));
+        
+        return members.map(member => {
+          console.log('[CompanyService.getCompanyMembers] Processando membro:', member);
+          
+          const mappedMember = {
+            id: member.id,
+            company_id: member.companyId || '',
+            user_id: member.userId || '',
+            role: member.role as 'admin' | 'member' | 'owner',
+            name: member.user?.fullName || '',
+            email: member.user?.email || '',
+            created_at: member.user?.createdAt || '',
+            user: {
+              id: member.userId || '',
+              full_name: member.user?.fullName || '',
+              email: member.user?.email || ''
+            }
+          };
+          
+          console.log('[CompanyService.getCompanyMembers] Membro mapeado:', mappedMember);
+          return mappedMember;
+        });
       }),
       catchError(this.handleError)
     );

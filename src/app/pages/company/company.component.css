@@ -129,6 +129,16 @@ table tbody tr:hover {
 }
 
 /* Role badges with green theme */
+.role-owner {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.dark .role-owner {
+  background-color: #451a03;
+  color: #fbbf24;
+}
+
 .role-admin {
   background-color: #dcfce7;
   color: #166534;

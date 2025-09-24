@@ -144,36 +144,54 @@
               (click)="onToggleAddMemberForm()"
               class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
               <i class="fas fa-plus mr-2"></i>
-              {{ showAddMemberForm ? 'Cancelar' : 'Adicionar Funcionário' }}
+              {{ showAddMemberForm ? 'Cancelar' : 'Adicionar Funcionário (Em desenvolvimento)' }}
             </button>
           </div>
         </div>
         
-        <!-- Formulário de Adicionar Funcionário -->
+        <!-- Formulário de Adicionar/Editar Funcionário -->
         <div *ngIf="showAddMemberForm" class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-4">Adicionar Novo Funcionário</h4>
+          <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-4">
+            {{ editingMember ? 'Editar Funcionário' : 'Adicionar Novo Funcionário' }}
+          </h4>
           <form (ngSubmit)="onAddMember()" class="space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div *ngFor="let field of memberFormFields" class="form-field">
-                <label class="field-label">{{ field.label }}<span *ngIf="field.required" class="text-red-500 ml-1">*</span></label>
+              <div *ngFor="let field of memberFormFields" class="form-field" 
+                   [style.display]="editingMember && field.key === 'password' ? 'none' : 'block'">
+                <label class="field-label">
+                  {{ field.label }}
+                  <span *ngIf="field.required && (!editingMember || field.key !== 'password')" class="text-red-500 ml-1">*</span>
+                </label>
                 <input 
                   *ngIf="field.type !== 'select'"
                   [type]="field.type" 
                   [value]="getMemberFormValue(field.key)"
                   (input)="setMemberFormValue(field.key, $event.target.value)"
                   [name]="field.key"
-                  [required]="field.required || false"
+                  [required]="field.required && (!editingMember || field.key !== 'password')"
                   class="field-input">
                 <select 
                   *ngIf="field.type === 'select'"
                   [value]="getMemberFormValue(field.key)"
                     (change)="onSelectChange(field.key, $event)"
                   [name]="field.key"
-                  [required]="field.required || false"
+                  [required]="field.required"
                   class="field-input">
                   <option *ngFor="let option of field.options" [value]="option.value">{{ option.label }}</option>
                 </select>
               </div>
+            </div>
+            
+            <!-- Campo de senha para edição (opcional) -->
+            <div *ngIf="editingMember" class="form-field">
+              <label class="field-label">Nova Senha (opcional)</label>
+              <input 
+                type="password" 
+                [value]="getMemberFormValue('password')"
+                (input)="setMemberFormValue('password', $event.target.value)"
+                name="password"
+                class="field-input"
+                placeholder="Deixe em branco para manter a senha atual">
             </div>
             <div class="flex justify-end space-x-3">
               <button 
@@ -186,9 +204,10 @@
                 type="submit"
                 [disabled]="isAddingMember"
                 class="btn-primary">
-                <i class="fas fa-plus mr-2" *ngIf="!isAddingMember"></i>
+                <i class="fas fa-plus mr-2" *ngIf="!isAddingMember && !editingMember"></i>
+                <i class="fas fa-edit mr-2" *ngIf="!isAddingMember && editingMember"></i>
                 <i class="fas fa-spinner fa-spin mr-2" *ngIf="isAddingMember"></i>
-                {{ isAddingMember ? 'Adicionando...' : 'Adicionar Funcionário' }}
+                {{ isAddingMember ? (editingMember ? 'Atualizando...' : 'Adicionando...') : (editingMember ? 'Atualizar Funcionário' : 'Adicionar Funcionário') }}
               </button>
             </div>
           </form>
@@ -218,6 +237,15 @@
           <p>Nenhum funcionário encontrado.</p>
         </div>
 
+        <!-- Debug Info 
+        <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg m-4">
+          <h4 class="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">Debug Info:</h4>
+          <p class="text-sm text-yellow-700 dark:text-yellow-300">Loading: {{ membersLoading }}</p>
+          <p class="text-sm text-yellow-700 dark:text-yellow-300">Members Length: {{ members.length }}</p>
+          <p class="text-sm text-yellow-700 dark:text-yellow-300">Members: {{ members | json }}</p>
+          <p class="text-sm text-yellow-700 dark:text-yellow-300">Error: {{ membersError }}</p>
+        </div>
+-->
         <!-- Members Table -->
         <div *ngIf="!membersLoading && members.length > 0" class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">

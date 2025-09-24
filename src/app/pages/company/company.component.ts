@@ -63,7 +63,18 @@ export class CompanyComponent implements OnInit, OnDestroy {
   membersError = '';
   showAddMemberForm = false;
   isAddingMember = false;
-  memberForm: { email: string; role: 'admin' | 'member' } = { email: '', role: 'member' };
+  editingMember: CompanyMember | null = null;
+  memberForm: { 
+    name: string; 
+    email: string; 
+    password: string; 
+    role: 'admin' | 'member' | 'owner' 
+  } = { 
+    name: '', 
+    email: '', 
+    password: '', 
+    role: 'member' 
+  };
 
   // Documents
   documents: CompanyDocument[] = [];
@@ -112,9 +123,21 @@ export class CompanyComponent implements OnInit, OnDestroy {
 
   memberFormFields: FormField[] = [
     { 
+      key: 'name', 
+      label: 'Nome Completo', 
+      type: 'text', 
+      required: true 
+    },
+    { 
       key: 'email', 
       label: 'Email', 
       type: 'email', 
+      required: true 
+    },
+    { 
+      key: 'password', 
+      label: 'Senha', 
+      type: 'password', 
       required: true 
     },
     { 
@@ -124,7 +147,8 @@ export class CompanyComponent implements OnInit, OnDestroy {
       required: true,
       options: [
         { value: 'member', label: 'Membro' },
-        { value: 'admin', label: 'Administrador' }
+        { value: 'admin', label: 'Administrador' },
+        { value: 'owner', label: 'Proprietário' }
       ]
     }
   ];
@@ -382,6 +406,7 @@ export class CompanyComponent implements OnInit, OnDestroy {
   // ===== MÉTODOS DE FUNCIONÁRIOS =====
   
   private loadMembers() {
+    console.log('[CompanyComponent.loadMembers] ===== CARREGANDO MEMBROS =====');
     this.membersLoading = true;
     this.membersError = '';
 
@@ -389,13 +414,20 @@ export class CompanyComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (members) => {
+          console.log('[CompanyComponent.loadMembers] Membros recebidos:', members);
+          console.log('[CompanyComponent.loadMembers] Quantidade de membros:', members.length);
+          console.log('[CompanyComponent.loadMembers] Dados dos membros:', JSON.stringify(members, null, 2));
+          
           this.members = members;
           this.membersLoading = false;
+          
+          console.log('[CompanyComponent.loadMembers] Membros definidos no componente:', this.members);
+          console.log('[CompanyComponent.loadMembers] ===== CARREGAMENTO CONCLUÍDO =====');
         },
         error: (error) => {
+          console.error('[CompanyComponent.loadMembers] Erro ao carregar membros:', error);
           this.membersError = 'Erro ao carregar membros';
           this.membersLoading = false;
-          console.error('Load members error:', error);
         }
       });
   }
@@ -404,16 +436,24 @@ export class CompanyComponent implements OnInit, OnDestroy {
     this.showAddMemberForm = !this.showAddMemberForm;
     if (!this.showAddMemberForm) {
       this.resetMemberForm();
+      this.editingMember = null;
     }
   }
 
   private resetMemberForm() {
-    this.memberForm = { email: '', role: 'member' };
+    this.memberForm = { 
+      name: '', 
+      email: '', 
+      password: '', 
+      role: 'member' 
+    };
   }
 
   onAddMember() {
-    console.log('[CompanyComponent.onAddMember] ===== ADICIONANDO FUNCIONÁRIO =====');
+    const isEditing = this.editingMember !== null;
+    console.log(`[CompanyComponent.onAddMember] ===== ${isEditing ? 'EDITANDO' : 'ADICIONANDO'} FUNCIONÁRIO =====`);
     console.log('[CompanyComponent.onAddMember] Dados do formulário:', this.memberForm);
+    console.log('[CompanyComponent.onAddMember] Editando membro:', this.editingMember);
     
     if (!this.validateMemberForm()) {
       console.log('[CompanyComponent.onAddMember] Validação falhou');
@@ -423,60 +463,165 @@ export class CompanyComponent implements OnInit, OnDestroy {
     this.isAddingMember = true;
     this.membersError = '';
 
-    this.companyService.addMember(this.memberForm.email, this.memberForm.role)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: async (newMember: CompanyMember) => {
-          console.log('[CompanyComponent.onAddMember] Funcionário adicionado com sucesso:', newMember);
-          
-          this.members.push(newMember);
-          this.showAddMemberForm = false;
-          this.resetMemberForm();
-          this.isAddingMember = false;
-          
-          // Mostrar notificação de sucesso
-          await Swal.fire({
-            icon: 'success',
-            title: 'Sucesso!',
-            text: 'Funcionário adicionado com sucesso.',
-            showConfirmButton: true,
-            timer: 3000
-          });
-          
-          console.log('[CompanyComponent.onAddMember] Adição concluída');
-        },
+    if (isEditing) {
+      // Atualizar membro existente
+      console.log('[CompanyComponent.onAddMember] Atualizando membro existente...');
+      
+      this.companyService.updateMember(this.editingMember!.id, this.memberForm)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: async (updatedMember: CompanyMember) => {
+            console.log('[CompanyComponent.onAddMember] Membro atualizado com sucesso:', updatedMember);
+            
+            // Atualizar na lista
+            const index = this.members.findIndex(m => m.id === this.editingMember!.id);
+            if (index !== -1) {
+              this.members[index] = updatedMember;
+            }
+            
+            this.showAddMemberForm = false;
+            this.resetMemberForm();
+            this.editingMember = null;
+            this.isAddingMember = false;
+            
+            // Mostrar notificação de sucesso
+            await Swal.fire({
+              icon: 'success',
+              title: 'Sucesso!',
+              text: 'Funcionário atualizado com sucesso.',
+              showConfirmButton: true,
+              timer: 3000
+            });
+            
+            console.log('[CompanyComponent.onAddMember] Atualização concluída');
+          },
+          error: async (error: any) => {
+            console.error('[CompanyComponent.onAddMember] Erro ao atualizar:', error);
+            
+            this.membersError = 'Erro ao atualizar funcionário';
+            this.isAddingMember = false;
+            
+            // Mostrar notificação de erro
+            await Swal.fire({
+              icon: 'error',
+              title: 'Erro!',
+              text: 'Não foi possível atualizar o funcionário. Tente novamente.',
+              showConfirmButton: true
+            });
+          }
+        });
+    } else {
+      // Criar novo usuário e adicionar como membro
+      console.log('[CompanyComponent.onAddMember] Criando usuário no sistema...');
+      
+      this.companyService.createUserAndAddMember(this.memberForm)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: async (result: any) => {
+            console.log('[CompanyComponent.onAddMember] Usuário criado e funcionário adicionado com sucesso:', result);
+            
+            // Recarregar a lista de membros
+            this.loadMembers();
+            
+            this.showAddMemberForm = false;
+            this.resetMemberForm();
+            this.isAddingMember = false;
+            
+            // Mostrar notificação de sucesso
+            await Swal.fire({
+              icon: 'success',
+              title: 'Sucesso!',
+              text: 'Funcionário criado e adicionado com sucesso.',
+              showConfirmButton: true,
+              timer: 3000
+            });
+            
+            console.log('[CompanyComponent.onAddMember] Adição concluída');
+          },
         error: async (error: any) => {
           console.error('[CompanyComponent.onAddMember] Erro ao adicionar:', error);
           
-          this.membersError = 'Erro ao adicionar funcionário';
+          this.membersError = 'Erro ao criar usuário e adicionar funcionário';
           this.isAddingMember = false;
           
           // Mostrar notificação de erro
           await Swal.fire({
             icon: 'error',
             title: 'Erro!',
-            text: 'Não foi possível adicionar o funcionário. Tente novamente.',
+            text: 'Não foi possível criar o usuário e adicionar o funcionário. Tente novamente.',
             showConfirmButton: true
           });
         }
       });
+    }
   }
 
   private validateMemberForm(): boolean {
+    console.log('[CompanyComponent.validateMemberForm] Validando formulário de membro...');
+    console.log('[CompanyComponent.validateMemberForm] Dados do formulário:', this.memberForm);
+    
+    if (!this.memberForm.name?.trim()) {
+      console.log('[CompanyComponent.validateMemberForm] ERRO: Nome é obrigatório');
+      this.membersError = 'Nome é obrigatório';
+      return false;
+    }
     if (!this.memberForm.email?.trim()) {
+      console.log('[CompanyComponent.validateMemberForm] ERRO: Email é obrigatório');
       this.membersError = 'Email é obrigatório';
       return false;
     }
     if (!this.isValidEmail(this.memberForm.email)) {
+      console.log('[CompanyComponent.validateMemberForm] ERRO: Email inválido');
       this.membersError = 'Email inválido';
       return false;
     }
+    // Senha é obrigatória apenas para novos membros
+    if (!this.editingMember) {
+      if (!this.memberForm.password?.trim()) {
+        console.log('[CompanyComponent.validateMemberForm] ERRO: Senha é obrigatória');
+        this.membersError = 'Senha é obrigatória';
+        return false;
+      }
+      if (this.memberForm.password.length < 6) {
+        console.log('[CompanyComponent.validateMemberForm] ERRO: Senha deve ter pelo menos 6 caracteres');
+        this.membersError = 'Senha deve ter pelo menos 6 caracteres';
+        return false;
+      }
+    } else {
+      // Para edição, senha é opcional, mas se fornecida deve ter pelo menos 6 caracteres
+      if (this.memberForm.password && this.memberForm.password.length < 6) {
+        console.log('[CompanyComponent.validateMemberForm] ERRO: Senha deve ter pelo menos 6 caracteres');
+        this.membersError = 'Senha deve ter pelo menos 6 caracteres';
+        return false;
+      }
+    }
+    if (!this.memberForm.role) {
+      console.log('[CompanyComponent.validateMemberForm] ERRO: Função é obrigatória');
+      this.membersError = 'Função é obrigatória';
+      return false;
+    }
+    
+    console.log('[CompanyComponent.validateMemberForm] ✅ Validação passou');
     return true;
   }
 
   onEditMember(member: CompanyMember) {
-    // TODO: Implementar modal de edição
-    console.log('Editando funcionário:', member);
+    console.log('[CompanyComponent.onEditMember] ===== EDITANDO FUNCIONÁRIO =====');
+    console.log('[CompanyComponent.onEditMember] Funcionário:', member);
+    
+    // Preencher formulário com dados do membro
+    this.memberForm = {
+      name: member.name || '',
+      email: member.email || '',
+      password: '', // Não mostrar senha atual
+      role: member.role || 'member'
+    };
+    
+    // Mostrar formulário de edição
+    this.showAddMemberForm = true;
+    this.editingMember = member;
+    
+    console.log('[CompanyComponent.onEditMember] Formulário preenchido:', this.memberForm);
   }
 
   onRemoveMember(member: CompanyMember) {
@@ -540,11 +685,29 @@ export class CompanyComponent implements OnInit, OnDestroy {
   }
 
   getRoleClass(role: string): string {
-    return role === 'admin' ? 'role-admin' : 'role-member';
+    switch (role) {
+      case 'owner':
+        return 'role-owner';
+      case 'admin':
+        return 'role-admin';
+      case 'member':
+        return 'role-member';
+      default:
+        return 'role-member';
+    }
   }
 
   getRoleLabel(role: string): string {
-    return role === 'admin' ? 'Administrador' : 'Membro';
+    switch (role) {
+      case 'owner':
+        return 'Proprietário';
+      case 'admin':
+        return 'Administrador';
+      case 'member':
+        return 'Membro';
+      default:
+        return 'Membro';
+    }
   }
 
   // ===== MÉTODOS DE DOCUMENTOS =====
