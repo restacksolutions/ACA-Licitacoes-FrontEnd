@@ -19,6 +19,7 @@ import { ReportsComponent } from './pages/reports/reports.component';
 import { SettingsComponent } from './pages/settings/settings.component';
 import { ProfileComponent } from './pages/profile/profile.component';
 import { CompanyComponent } from './pages/company/company.component';
+import { DocumentsComponent } from './pages/documents/documents.component';
 
 // Auth pages (públicas)
 import { SignInComponent } from './pages/auth-pages/sign-in/sign-in.component';
@@ -100,6 +101,11 @@ export const routes: Routes = [
         path: 'company',
         component: CompanyComponent,
         title: 'Empresa - Sistema de Licitações'
+      },
+      {
+        path: 'documents',
+        component: DocumentsComponent,
+        title: 'Documentos - Sistema de Licitações'
       },
     ],
   },

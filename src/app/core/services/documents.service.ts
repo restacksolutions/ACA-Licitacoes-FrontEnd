@@ -6,11 +6,14 @@ import { ApiService } from './api.service';
 export interface CompanyDocument {
   id: string;
   docType: 'CNPJ' | 'INSCRICAO_ESTADUAL' | 'INSCRICAO_MUNICIPAL' | 'ALVARA' | 'CONTRATO_SOCIAL' | 'CERTIFICADO_DIGITAL' | 'LICENCA_AMBIENTAL' | 'CERTIDAO_FGTS' | 'CERTIDAO_INSS' | 'CERTIDAO_TRABALHISTA' | 'CERTIDAO_MUNICIPAL' | 'OUTROS';
-  docNumber: string;
-  issuer: string;
-  issueDate: string;
-  expiresAt: string;
+  docNumber?: string;
+  issuer?: string;
+  issueDate?: string;
+  expiresAt?: string;
   filePath?: string;
+  mimeType?: string;
+  fileSize?: number;
+  sha256Hex?: string;
   notes?: string;
   version: number;
   createdAt: string;
@@ -19,11 +22,21 @@ export interface CompanyDocument {
 
 export interface CreateDocumentRequest {
   docType: CompanyDocument['docType'];
-  docNumber: string;
-  issuer: string;
-  issueDate: string;
-  expiresAt: string;
+  docNumber?: string;
+  issuer?: string;
+  issueDate?: string;
+  expiresAt?: string;
   notes?: string;
+}
+
+export interface UploadDocumentRequest {
+  docType: CompanyDocument['docType'];
+  docNumber?: string;
+  issuer?: string;
+  issueDate?: string;
+  expiresAt?: string;
+  notes?: string;
+  file: File;
 }
 
 export interface UpdateDocumentRequest {
@@ -52,8 +65,8 @@ export class DocumentsService {
   /**
    * Obtém todos os documentos de uma empresa
    */
-  getDocuments(companyId: string): Observable<CompanyDocument[]> {
-    return this.apiService.getDocuments(companyId);
+  getDocuments(companyId: string, params?: { docType?: string; page?: number; pageSize?: number }): Observable<{ documents: CompanyDocument[]; pagination: any }> {
+    return this.apiService.getDocuments(companyId, params);
   }
 
   /**
@@ -66,16 +79,51 @@ export class DocumentsService {
   /**
    * Faz upload de arquivo para um documento
    */
-  uploadDocument(companyId: string, documentId: string, file: File): Observable<any> {
-    return this.apiService.uploadDocument(companyId, documentId, file);
+  uploadDocument(companyId: string, documentData: UploadDocumentRequest): Observable<CompanyDocument> {
+    return this.apiService.uploadDocument(companyId, documentData, documentData.file);
+  }
+
+  /**
+   * Download do conteúdo do documento
+   */
+  downloadDocument(companyId: string, documentId: string): Observable<Blob> {
+    return this.apiService.getDocumentContent(companyId, documentId);
+  }
+
+  /**
+   * Obtém metadados do documento
+   */
+  getDocumentMeta(companyId: string, documentId: string): Observable<CompanyDocument> {
+    return this.apiService.getDocumentMeta(companyId, documentId);
+  }
+
+  /**
+   * Exclui um documento
+   */
+  deleteDocument(companyId: string, documentId: string): Observable<any> {
+    return this.apiService.deleteDocument(companyId, documentId);
+  }
+
+  /**
+   * Atualiza metadados de um documento
+   */
+  updateDocument(companyId: string, documentId: string, documentData: UpdateDocumentRequest): Observable<CompanyDocument> {
+    return this.apiService.updateDocument(companyId, documentId, documentData);
+  }
+
+  /**
+   * Reupload de documento (nova versão)
+   */
+  reuploadDocument(companyId: string, documentId: string, documentData: UploadDocumentRequest): Observable<CompanyDocument> {
+    return this.apiService.reuploadDocument(companyId, documentId, documentData, documentData.file);
   }
 
   /**
    * Obtém documentos por tipo
    */
   getDocumentsByType(companyId: string, docType: CompanyDocument['docType']): Observable<CompanyDocument[]> {
-    return this.getDocuments(companyId).pipe(
-      map(documents => documents.filter(doc => doc.docType === docType))
+    return this.getDocuments(companyId, { docType }).pipe(
+      map(response => response.documents)
     );
   }
 
@@ -84,7 +132,7 @@ export class DocumentsService {
    */
   getExpiredDocuments(companyId: string): Observable<CompanyDocument[]> {
     return this.getDocuments(companyId).pipe(
-      map(documents => documents.filter(doc => this.isDocumentExpired(doc)))
+      map(response => response.documents.filter(doc => this.isDocumentExpired(doc)))
     );
   }
 
@@ -93,7 +141,7 @@ export class DocumentsService {
    */
   getExpiringSoonDocuments(companyId: string, daysThreshold: number = 30): Observable<CompanyDocument[]> {
     return this.getDocuments(companyId).pipe(
-      map(documents => documents.filter(doc => this.isDocumentExpiringSoon(doc, daysThreshold)))
+      map(response => response.documents.filter(doc => this.isDocumentExpiringSoon(doc, daysThreshold)))
     );
   }
 
@@ -102,7 +150,7 @@ export class DocumentsService {
    */
   getValidDocuments(companyId: string): Observable<CompanyDocument[]> {
     return this.getDocuments(companyId).pipe(
-      map(documents => documents.filter(doc => !this.isDocumentExpired(doc)))
+      map(response => response.documents.filter(doc => !this.isDocumentExpired(doc)))
     );
   }
 
@@ -111,7 +159,8 @@ export class DocumentsService {
    */
   getDocumentStatistics(companyId: string): Observable<DocumentStatistics> {
     return this.getDocuments(companyId).pipe(
-      map(documents => {
+      map(response => {
+        const documents = response.documents;
         const total = documents.length;
         const byType = documents.reduce((acc, doc) => {
           acc[doc.docType] = (acc[doc.docType] || 0) + 1;
@@ -137,6 +186,7 @@ export class DocumentsService {
    * Verifica se um documento está expirado
    */
   isDocumentExpired(document: CompanyDocument): boolean {
+    if (!document.expiresAt) return false;
     const now = new Date();
     const expirationDate = new Date(document.expiresAt);
     return expirationDate < now;
@@ -146,6 +196,7 @@ export class DocumentsService {
    * Verifica se um documento está próximo do vencimento
    */
   isDocumentExpiringSoon(document: CompanyDocument, daysThreshold: number = 30): boolean {
+    if (!document.expiresAt) return false;
     const now = new Date();
     const expirationDate = new Date(document.expiresAt);
     const daysDiff = (expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
@@ -214,6 +265,7 @@ export class DocumentsService {
    * Calcula dias até o vencimento
    */
   getDaysUntilExpiration(document: CompanyDocument): number {
+    if (!document.expiresAt) return 0;
     const now = new Date();
     const expirationDate = new Date(document.expiresAt);
     const daysDiff = (expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
@@ -225,7 +277,7 @@ export class DocumentsService {
    */
   getDocumentsNeedingAttention(companyId: string, daysThreshold: number = 30): Observable<CompanyDocument[]> {
     return this.getDocuments(companyId).pipe(
-      map(documents => documents.filter(doc => 
+      map(response => response.documents.filter(doc => 
         this.isDocumentExpired(doc) || this.isDocumentExpiringSoon(doc, daysThreshold)
       ))
     );

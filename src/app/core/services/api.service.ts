@@ -289,8 +289,18 @@ export class ApiService {
   }
 
   // Métodos de documentos
-  getDocuments(companyId: string): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiBaseUrl}/companies/${companyId}/documents`, { headers: this.getHeaders() })
+  getDocuments(companyId: string, params?: { docType?: string; page?: number; pageSize?: number }): Observable<any> {
+    let url = `${this.apiBaseUrl}/companies/${companyId}/documents`;
+    if (params) {
+      const queryParams = new URLSearchParams();
+      if (params.docType) queryParams.append('docType', params.docType);
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.pageSize) queryParams.append('pageSize', params.pageSize.toString());
+      if (queryParams.toString()) {
+        url += `?${queryParams.toString()}`;
+      }
+    }
+    return this.http.get<any>(url, { headers: this.getHeaders() })
       .pipe(catchError(this.handleError));
   }
 
@@ -299,9 +309,15 @@ export class ApiService {
       .pipe(catchError(this.handleError));
   }
 
-  uploadDocument(companyId: string, documentId: string, file: File): Observable<any> {
+  uploadDocument(companyId: string, documentData: any, file: File): Observable<any> {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('docType', documentData.docType);
+    if (documentData.docNumber) formData.append('docNumber', documentData.docNumber);
+    if (documentData.issuer) formData.append('issuer', documentData.issuer);
+    if (documentData.issueDate) formData.append('issueDate', documentData.issueDate);
+    if (documentData.expiresAt) formData.append('expiresAt', documentData.expiresAt);
+    if (documentData.notes) formData.append('notes', documentData.notes);
     
     const headers = new HttpHeaders();
     const token = this.tokenSubject.value;
@@ -309,7 +325,49 @@ export class ApiService {
       headers.set('Authorization', `Bearer ${token}`);
     }
 
-    return this.http.post(`${this.apiBaseUrl}/companies/${companyId}/documents/${documentId}/upload`, formData, { headers })
+    return this.http.post(`${this.apiBaseUrl}/companies/${companyId}/documents/upload`, formData, { headers })
+      .pipe(catchError(this.handleError));
+  }
+
+  getDocumentContent(companyId: string, documentId: string): Observable<Blob> {
+    return this.http.get(`${this.apiBaseUrl}/companies/${companyId}/documents/${documentId}/content`, { 
+      headers: this.getHeaders(),
+      responseType: 'blob'
+    }).pipe(catchError(this.handleError));
+  }
+
+  getDocumentMeta(companyId: string, documentId: string): Observable<any> {
+    return this.http.get(`${this.apiBaseUrl}/companies/${companyId}/documents/${documentId}/meta`, { headers: this.getHeaders() })
+      .pipe(catchError(this.handleError));
+  }
+
+  updateDocument(companyId: string, documentId: string, documentData: any): Observable<any> {
+    return this.http.patch(`${this.apiBaseUrl}/companies/${companyId}/documents/${documentId}`, documentData, { headers: this.getHeaders() })
+      .pipe(catchError(this.handleError));
+  }
+
+  deleteDocument(companyId: string, documentId: string): Observable<any> {
+    return this.http.delete(`${this.apiBaseUrl}/companies/${companyId}/documents/${documentId}`, { headers: this.getHeaders() })
+      .pipe(catchError(this.handleError));
+  }
+
+  reuploadDocument(companyId: string, documentId: string, documentData: any, file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('docType', documentData.docType);
+    if (documentData.docNumber) formData.append('docNumber', documentData.docNumber);
+    if (documentData.issuer) formData.append('issuer', documentData.issuer);
+    if (documentData.issueDate) formData.append('issueDate', documentData.issueDate);
+    if (documentData.expiresAt) formData.append('expiresAt', documentData.expiresAt);
+    if (documentData.notes) formData.append('notes', documentData.notes);
+    
+    const headers = new HttpHeaders();
+    const token = this.tokenSubject.value;
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+
+    return this.http.post(`${this.apiBaseUrl}/companies/${companyId}/documents/${documentId}/reupload`, formData, { headers })
       .pipe(catchError(this.handleError));
   }
 

@@ -561,7 +561,7 @@ export class CompanyService {
         }
         throw new Error('Nenhuma empresa encontrada');
       }),
-      map(documents => documents.map(doc => ({
+      map(documents => documents.map((doc: any) => ({
         id: doc.id,
         company_id: doc.companyId || '',
         doc_type: doc.docType as any,

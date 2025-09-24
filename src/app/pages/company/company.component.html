@@ -311,79 +311,403 @@
 
     <!-- Documentos -->
     <div *ngIf="activeTab === 'documents'" class="space-y-6">
-      <!-- Aviso de Documentos Expirados -->
-      
-      <!-- Card CNPJ com Documentos por Status -->
-      <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center">
-              <div>
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Controle de Documentos</h3>
-                <p class="text-sm text-gray-600 dark:text-gray-400">Empresa Exemplo Ltda</p>
-              </div>
-            </div>
-            <button 
-            (click)="onToggleAddMemberForm()"
-            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
+      <!-- Error Message -->
+      <div *ngIf="documentsError" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+        <div class="flex items-center">
+          <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
+          <p class="text-red-700 dark:text-red-300">{{ documentsError }}</p>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="flex flex-col sm:flex-row gap-4">
+        <!-- Filter -->
+        <div class="flex-1">
+          <label for="docTypeFilter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Filtrar por tipo:</label>
+          <select 
+            id="docTypeFilter" 
+            [(ngModel)]="selectedDocType" 
+            (change)="onDocTypeFilterChange()"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+          >
+            <option value="">Todos os tipos</option>
+            <option *ngFor="let type of docTypes" [value]="type.value">{{ type.label }}</option>
+          </select>
+        </div>
+
+        <!-- Upload Button -->
+        <div class="flex items-end">
+          <button 
+            (click)="openUploadModal()"
+            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
             <i class="fas fa-plus mr-2"></i>
-            Adicionar Documento
+            Novo Documento
           </button>
-            
-          </div>
         </div>
-        
-        <div *ngIf="expiredDocumentsCount > 0" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <div class="flex items-center">
-            <i class="fas fa-exclamation-triangle text-red-500 mr-3"></i>
-            <div>
-              <h3 class="text-lg font-semibold text-red-800 dark:text-red-200">Atenção!</h3>
-              <p class="text-red-700 dark:text-red-300">
-                Você tem {{ expiredDocumentsCount }} documento(s) expirado(s) que precisam ser renovados.
-              </p>
-            </div>
-          </div>
-        </div>
-        <!-- Documentos por Status -->
-        <div class="p-6">
-          <div *ngFor="let statusGroup of documentStatusGroups" class="mb-6">
-            <div class="flex items-center mb-4">
-              <div [class]="statusGroup.colorClass" class="h-3 w-3 rounded-full mr-3"></div>
-              <h4 class="text-md font-semibold text-gray-900 dark:text-white">
+      </div>
+
+      <!-- Loading -->
+      <div *ngIf="documentsLoading" class="flex justify-center items-center py-8">
+        <i class="fas fa-spinner fa-spin text-2xl text-blue-600"></i>
+        <span class="ml-2 text-gray-600 dark:text-gray-400">Carregando...</span>
+      </div>
+
+      <!-- Documentos por Status -->
+      <div *ngIf="!documentsLoading" class="space-y-8">
+        <div *ngFor="let statusGroup of documentStatusGroups" class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+          <!-- Header do Status -->
+          <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center">
+              <div [class]="statusGroup.colorClass" class="h-4 w-4 rounded-full mr-3"></div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
                 {{ statusGroup.title }} ({{ statusGroup.count }})
-              </h4>
+              </h3>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div *ngFor="let doc of statusGroup.documents" 
-                   [class]="statusGroup.cardClass" 
-                   class="rounded-lg p-4">
-                <div class="flex items-start justify-between">
-                  <div class="flex-1">
-                    <div class="flex items-center mb-2">
-                      <i [class]="statusGroup.iconClass" class="mr-2"></i>
-                      <h5 class="font-medium text-gray-900 dark:text-white text-sm">{{ doc.notes }}</h5>
+          </div>
+
+          <!-- Lista de Documentos -->
+          <div *ngIf="statusGroup.count > 0" class="divide-y divide-gray-200 dark:divide-gray-700">
+            <div *ngFor="let document of statusGroup.documents" class="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700">
+              <div class="flex items-center justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                      <i class="fas fa-file-pdf text-gray-400 text-2xl"></i>
                     </div>
-                    <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">{{ doc.issuer }}</p>
-                    <p [class]="statusGroup.textClass" class="text-xs mb-3">
-                      <i class="fas fa-calendar-alt mr-1"></i>
-                      {{ statusGroup.dateLabel }}: {{ formatDate(doc.expires_at) }}
-                    </p>
-                    <button 
-                      (click)="onUpdateDocument(doc)"
-                      [class]="statusGroup.buttonClass"
-                      class="px-3 py-1 text-white rounded text-xs transition-colors">
-                      <i class="fas fa-upload mr-1"></i>
-                      Atualizar
-                    </button>
+                    <div class="ml-4 flex-1">
+                      <div class="flex items-center">
+                        <h4 class="text-lg font-medium text-gray-900 dark:text-white">{{ getDocumentTypeLabel(document.docType) }}</h4>
+                        <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                              [class]="{
+                                'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200': getDocumentStatus(document) === 'valid',
+                                'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200': getDocumentStatus(document) === 'warning',
+                                'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200': getDocumentStatus(document) === 'expired'
+                              }">
+                          {{ getDocumentStatusLabel(getDocumentStatus(document)) }}
+                        </span>
+                      </div>
+                      <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                          <div *ngIf="document.docNumber">
+                            <span class="font-medium">Número:</span> {{ document.docNumber }}
+                          </div>
+                          <div *ngIf="document.issuer">
+                            <span class="font-medium">Emissor:</span> {{ document.issuer }}
+                          </div>
+                          <div>
+                            <span class="font-medium">Versão:</span> {{ document.version }}
+                          </div>
+                          <div *ngIf="document.issueDate">
+                            <span class="font-medium">Data de Emissão:</span> {{ formatDate(document.issueDate) }}
+                          </div>
+                          <div *ngIf="document.expiresAt">
+                            <span class="font-medium">Data de Vencimento:</span> {{ formatDate(document.expiresAt) }}
+                          </div>
+                          <div *ngIf="document.fileSize">
+                            <span class="font-medium">Tamanho:</span> {{ formatFileSize(document.fileSize) }}
+                          </div>
+                        </div>
+                        <div *ngIf="document.notes" class="mt-2">
+                          <span class="font-medium">Observações:</span> {{ document.notes }}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <span [class]="statusGroup.badgeClass" class="px-2 py-1 rounded-full text-xs font-medium">
-                    {{ statusGroup.badgeText }}
-                  </span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <button 
+                    (click)="downloadDocument(document)"
+                    class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    <i class="fas fa-download mr-1"></i>
+                    Baixar
+                  </button>
+                  <button 
+                    (click)="editDocument(document)"
+                    class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    <i class="fas fa-edit mr-1"></i>
+                    Editar
+                  </button>
+                  <button 
+                    (click)="deleteDocument(document)"
+                    class="inline-flex items-center px-3 py-2 border border-red-300 dark:border-red-600 shadow-sm text-sm leading-4 font-medium rounded-md text-red-700 dark:text-red-300 bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  >
+                    <i class="fas fa-trash mr-1"></i>
+                    Excluir
+                  </button>
                 </div>
               </div>
             </div>
           </div>
+
+          <!-- Empty State para o Status -->
+          <div *ngIf="statusGroup.count === 0" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+            <i [class]="statusGroup.iconClass" class="text-4xl mb-4"></i>
+            <p class="text-sm">{{ statusGroup.title }} - Nenhum documento encontrado</p>
+          </div>
         </div>
+
+        <!-- Empty State Geral -->
+        <div *ngIf="documents.length === 0" class="bg-white dark:bg-gray-800 shadow rounded-lg p-8 text-center">
+          <i class="fas fa-file-alt text-4xl text-gray-400 mb-4"></i>
+          <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">Nenhum documento</h3>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Comece fazendo upload de um documento.</p>
+        </div>
+      </div>
+      
+      <!-- Alerta para Documentos Expirados -->
+      <div *ngIf="expiredDocumentsCount > 0" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+        <div class="flex items-center">
+          <i class="fas fa-exclamation-triangle text-red-500 mr-3"></i>
+          <div>
+            <h3 class="text-lg font-semibold text-red-800 dark:text-red-200">Atenção!</h3>
+            <p class="text-red-700 dark:text-red-300">
+              Você tem {{ expiredDocumentsCount }} documento(s) expirado(s) que precisam ser renovados.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <!-- Upload Modal -->
+  <div *ngIf="showUploadModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white dark:bg-gray-800">
+      <div class="mt-3">
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Upload de Documento</h3>
+        
+        <form (ngSubmit)="uploadDocument()" class="space-y-4">
+          <!-- Doc Type -->
+          <div>
+            <label for="docType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de Documento *</label>
+            <select 
+              id="docType" 
+              [(ngModel)]="uploadForm.docType" 
+              name="docType"
+              required
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            >
+              <option *ngFor="let type of docTypes" [value]="type.value">{{ type.label }}</option>
+            </select>
+          </div>
+
+          <!-- Doc Number -->
+          <div>
+            <label for="docNumber" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Número do Documento</label>
+            <input 
+              type="text" 
+              id="docNumber" 
+              [(ngModel)]="uploadForm.docNumber" 
+              name="docNumber"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Ex: 12.345.678/0001-90"
+            >
+          </div>
+
+          <!-- Issuer -->
+          <div>
+            <label for="issuer" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Emissor</label>
+            <input 
+              type="text" 
+              id="issuer" 
+              [(ngModel)]="uploadForm.issuer" 
+              name="issuer"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Ex: Receita Federal"
+            >
+          </div>
+
+          <!-- Issue Date -->
+          <div>
+            <label for="issueDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data de Emissão</label>
+            <input 
+              type="date" 
+              id="issueDate" 
+              [(ngModel)]="uploadForm.issueDate" 
+              name="issueDate"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            >
+          </div>
+
+          <!-- Expires At -->
+          <div>
+            <label for="expiresAt" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data de Vencimento</label>
+            <input 
+              type="date" 
+              id="expiresAt" 
+              [(ngModel)]="uploadForm.expiresAt" 
+              name="expiresAt"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            >
+          </div>
+
+          <!-- Notes -->
+          <div>
+            <label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Observações</label>
+            <textarea 
+              id="notes" 
+              [(ngModel)]="uploadForm.notes" 
+              name="notes"
+              rows="3"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Observações sobre o documento..."
+            ></textarea>
+          </div>
+
+          <!-- File Upload -->
+          <div>
+            <label for="file" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Arquivo *</label>
+            <input 
+              type="file" 
+              id="file" 
+              (change)="onFileSelected($event)"
+              accept=".pdf,.jpg,.jpeg,.png"
+              required
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            >
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">PDF, JPEG ou PNG. Máximo 20MB.</p>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex justify-end space-x-3 pt-4">
+            <button 
+              type="button" 
+              (click)="closeUploadModal()"
+              class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit" 
+              [disabled]="documentsLoading || !selectedFile"
+              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span *ngIf="documentsLoading">Enviando...</span>
+              <span *ngIf="!documentsLoading">Enviar</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Document Modal -->
+  <div *ngIf="showEditModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white dark:bg-gray-800">
+      <div class="mt-3">
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Editar Documento</h3>
+        
+        <form (ngSubmit)="updateDocument()" class="space-y-4">
+          <!-- Doc Type -->
+          <div>
+            <label for="editDocType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de Documento *</label>
+            <select 
+              id="editDocType" 
+              [(ngModel)]="editForm.docType" 
+              name="editDocType"
+              required
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            >
+              <option *ngFor="let type of docTypes" [value]="type.value">{{ type.label }}</option>
+            </select>
+          </div>
+
+          <!-- Doc Number -->
+          <div>
+            <label for="editDocNumber" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Número do Documento</label>
+            <input 
+              type="text" 
+              id="editDocNumber" 
+              [(ngModel)]="editForm.docNumber" 
+              name="editDocNumber"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Ex: 12.345.678/0001-90"
+            >
+          </div>
+
+          <!-- Issuer -->
+          <div>
+            <label for="editIssuer" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Emissor</label>
+            <input 
+              type="text" 
+              id="editIssuer" 
+              [(ngModel)]="editForm.issuer" 
+              name="editIssuer"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Ex: Receita Federal"
+            >
+          </div>
+
+          <!-- Issue Date -->
+          <div>
+            <label for="editIssueDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data de Emissão</label>
+            <input 
+              type="date" 
+              id="editIssueDate" 
+              [(ngModel)]="editForm.issueDate" 
+              name="editIssueDate"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            >
+          </div>
+
+          <!-- Expires At -->
+          <div>
+            <label for="editExpiresAt" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data de Vencimento</label>
+            <input 
+              type="date" 
+              id="editExpiresAt" 
+              [(ngModel)]="editForm.expiresAt" 
+              name="editExpiresAt"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            >
+          </div>
+
+          <!-- Notes -->
+          <div>
+            <label for="editNotes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Observações</label>
+            <textarea 
+              id="editNotes" 
+              [(ngModel)]="editForm.notes" 
+              name="editNotes"
+              rows="3"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              placeholder="Observações sobre o documento..."
+            ></textarea>
+          </div>
+
+          <!-- File Upload (Optional) -->
+          <div>
+            <label for="editFile" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Novo Arquivo (opcional)</label>
+            <input 
+              type="file" 
+              id="editFile" 
+              (change)="onEditFileSelected($event)"
+              accept=".pdf,.jpg,.jpeg,.png"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            >
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">PDF, JPEG ou PNG. Máximo 20MB. Deixe em branco para manter o arquivo atual.</p>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex justify-end space-x-3 pt-4">
+            <button 
+              type="button" 
+              (click)="closeEditModal()"
+              class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit" 
+              [disabled]="documentsLoading"
+              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span *ngIf="documentsLoading">Salvando...</span>
+              <span *ngIf="!documentsLoading">Salvar Alterações</span>
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

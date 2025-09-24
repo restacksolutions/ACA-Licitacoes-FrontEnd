@@ -2,9 +2,11 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subject, takeUntil } from 'rxjs';
-import { CompanyService, Company, CompanyMember, CompanyDocument, CompanyUpdateData, DocumentUpdateData } from './company.service';
+import { Subject, takeUntil, switchMap } from 'rxjs';
+import { CompanyService, Company, CompanyMember, CompanyUpdateData, DocumentUpdateData } from './company.service';
 import { AuthService } from '../auth-pages/auth.service';
+import { DocumentsService, UploadDocumentRequest, CompanyDocument } from '../../core/services/documents.service';
+import { ApiService } from '../../core/services/api.service';
 import Swal from 'sweetalert2';
 
 // Interfaces para configuração dos formulários e tabelas
@@ -78,19 +80,52 @@ export class CompanyComponent implements OnInit, OnDestroy {
 
   // Documents
   documents: CompanyDocument[] = [];
-  missingDocuments: CompanyDocument[] = [];
+  filteredDocuments: CompanyDocument[] = [];
+  missingDocuments: any[] = [];
   documentsLoading = false;
   documentsError = '';
-  showAddDocumentForm = false;
-  isAddingDocument = false;
-  documentForm: DocumentUpdateData = {
-    doc_type: 'outros',
-    doc_number: '',
-    issuer: '',
-    issue_date: '',
-    expires_at: '',
-    notes: ''
+  showUploadModal = false;
+  showEditModal = false;
+  selectedFile: File | null = null;
+  selectedEditFile: File | null = null;
+  selectedDocType: string = '';
+  editingDocument: CompanyDocument | null = null;
+  
+  // Upload form
+  uploadForm: UploadDocumentRequest = {
+    docType: 'CNPJ',
+    file: null as any
   };
+
+  // Edit form
+  editForm: {
+    docType: string;
+    docNumber?: string;
+    issuer?: string;
+    issueDate?: string;
+    expiresAt?: string;
+    notes?: string;
+    file?: File | null;
+  } = {
+    docType: 'CNPJ',
+    file: null
+  };
+
+  // Document types
+  docTypes = [
+    { value: 'CNPJ', label: 'CNPJ' },
+    { value: 'INSCRICAO_ESTADUAL', label: 'Inscrição Estadual' },
+    { value: 'INSCRICAO_MUNICIPAL', label: 'Inscrição Municipal' },
+    { value: 'ALVARA', label: 'Alvará' },
+    { value: 'CONTRATO_SOCIAL', label: 'Contrato Social' },
+    { value: 'CERTIFICADO_DIGITAL', label: 'Certificado Digital' },
+    { value: 'LICENCA_AMBIENTAL', label: 'Licença Ambiental' },
+    { value: 'CERTIDAO_FGTS', label: 'Certidão FGTS' },
+    { value: 'CERTIDAO_INSS', label: 'Certidão INSS' },
+    { value: 'CERTIDAO_TRABALHISTA', label: 'Certidão Trabalhista' },
+    { value: 'CERTIDAO_MUNICIPAL', label: 'Certidão Municipal' },
+    { value: 'OUTROS', label: 'Outros' }
+  ];
 
   // UI State
   activeTab: 'info' | 'members' | 'documents' = 'info';
@@ -215,6 +250,8 @@ export class CompanyComponent implements OnInit, OnDestroy {
   constructor(
     private companyService: CompanyService,
     private authService: AuthService,
+    private documentsService: DocumentsService,
+    private apiService: ApiService,
     private router: Router
   ) {}
 
@@ -716,19 +753,35 @@ export class CompanyComponent implements OnInit, OnDestroy {
     this.documentsLoading = true;
     this.documentsError = '';
 
-    this.companyService.getCompanyDocuments()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (documents) => {
-          this.documents = documents;
-          this.documentsLoading = false;
-        },
-        error: (error) => {
-          this.documentsError = 'Erro ao carregar documentos';
-          this.documentsLoading = false;
-          console.error('Load documents error:', error);
+    this.apiService.getCompanies().pipe(
+      switchMap(companies => {
+        if (companies.length === 0) {
+          throw new Error('Nenhuma empresa encontrada');
         }
-      });
+        
+        const companyData = companies[0];
+        const company = companyData.company || companyData;
+        const companyId = company.id;
+        
+        if (!companyId) {
+          throw new Error('ID da empresa não encontrado');
+        }
+
+        return this.documentsService.getDocuments(companyId);
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (response) => {
+        this.documents = response.documents;
+        this.filteredDocuments = response.documents;
+        this.documentsLoading = false;
+      },
+      error: (error) => {
+        this.documentsError = error.message || 'Erro ao carregar documentos';
+        this.documentsLoading = false;
+        console.error('Load documents error:', error);
+      }
+    });
   }
 
   private loadMissingDocuments() {
@@ -745,24 +798,376 @@ export class CompanyComponent implements OnInit, OnDestroy {
   }
 
   getDocumentsByStatus(status: 'valid' | 'warning' | 'expired'): CompanyDocument[] {
-    return this.missingDocuments.filter(doc => {
-      const daysUntilExpiry = this.getDaysUntilExpiry(doc.expires_at);
+    return this.documents.filter(doc => {
+      if (!doc.expiresAt) {
+        return status === 'valid'; // Documentos sem data de expiração são considerados válidos
+      }
+      
+      const now = new Date();
+      const expirationDate = new Date(doc.expiresAt);
+      const daysDiff = (expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+      
       switch (status) {
         case 'valid':
-          return daysUntilExpiry > 15;
+          return daysDiff > 30; // Mais de 30 dias para expirar
         case 'warning':
-          return daysUntilExpiry > 0 && daysUntilExpiry <= 15;
+          return daysDiff > 0 && daysDiff <= 30; // Entre 1 e 30 dias para expirar
         case 'expired':
-          return daysUntilExpiry <= 0;
+          return daysDiff <= 0; // Já expirado
         default:
           return false;
       }
     });
   }
 
-  onUpdateDocument(doc: CompanyDocument) {
-    // TODO: Implementar modal de upload de documento
-    console.log('Atualizando documento:', doc);
+  // ===== MÉTODOS CRUD DE DOCUMENTOS =====
+
+  openUploadModal() {
+    this.showUploadModal = true;
+    this.resetUploadForm();
+  }
+
+  closeUploadModal() {
+    this.showUploadModal = false;
+    this.resetUploadForm();
+  }
+
+  resetUploadForm() {
+    this.uploadForm = {
+      docType: 'CNPJ',
+      file: null as any
+    };
+    this.selectedFile = null;
+    this.documentsError = '';
+  }
+
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      // Validar tamanho (20MB)
+      if (file.size > 20 * 1024 * 1024) {
+        this.documentsError = 'Arquivo muito grande. Máximo 20MB.';
+        return;
+      }
+
+      // Validar tipo
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        this.documentsError = 'Tipo de arquivo não permitido. Use PDF, JPEG ou PNG.';
+        return;
+      }
+
+      this.selectedFile = file;
+      this.uploadForm.file = file;
+      this.documentsError = '';
+    }
+  }
+
+  uploadDocument() {
+    if (!this.uploadForm.file) {
+      this.documentsError = 'Selecione um arquivo';
+      return;
+    }
+
+    this.documentsLoading = true;
+    this.documentsError = '';
+
+    this.apiService.getCompanies().pipe(
+      switchMap(companies => {
+        if (companies.length === 0) {
+          throw new Error('Nenhuma empresa encontrada');
+        }
+        
+        const companyData = companies[0];
+        const company = companyData.company || companyData;
+        const companyId = company.id;
+        
+        if (!companyId) {
+          throw new Error('ID da empresa não encontrado');
+        }
+
+        return this.documentsService.uploadDocument(companyId, this.uploadForm);
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (document) => {
+        this.loadDocuments(); // Recarregar lista
+        this.closeUploadModal();
+        this.documentsLoading = false;
+        Swal.fire('Sucesso!', 'Documento enviado com sucesso!', 'success');
+      },
+      error: (error) => {
+        this.documentsError = error.message || 'Erro ao fazer upload do documento';
+        this.documentsLoading = false;
+        Swal.fire('Erro!', this.documentsError, 'error');
+      }
+    });
+  }
+
+  downloadDocument(document: CompanyDocument) {
+    console.log('🔽 [CompanyComponent.downloadDocument] ===== INICIANDO DOWNLOAD =====');
+    console.log('📄 Documento:', document);
+    
+    this.apiService.getCompanies().pipe(
+      switchMap(companies => {
+        console.log('🏢 [CompanyComponent.downloadDocument] Empresas encontradas:', companies);
+        
+        if (companies.length === 0) {
+          throw new Error('Nenhuma empresa encontrada');
+        }
+        
+        const companyData = companies[0];
+        const company = companyData.company || companyData;
+        const companyId = company.id;
+        
+        console.log('🏢 [CompanyComponent.downloadDocument] CompanyId:', companyId);
+        
+        if (!companyId) {
+          throw new Error('ID da empresa não encontrado');
+        }
+
+        console.log('📥 [CompanyComponent.downloadDocument] Chamando downloadDocument...');
+        return this.documentsService.downloadDocument(companyId, document.id);
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (blob) => {
+        console.log('✅ [CompanyComponent.downloadDocument] Blob recebido:', blob);
+        console.log('📊 [CompanyComponent.downloadDocument] Tamanho do blob:', blob.size);
+        
+        const url = window.URL.createObjectURL(blob);
+        const link = window.document.createElement('a');
+        link.href = url;
+        link.download = `${document.docType}_v${document.version}.pdf`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+        
+        console.log('✅ [CompanyComponent.downloadDocument] Download iniciado com sucesso');
+      },
+      error: (error) => {
+        console.error('❌ [CompanyComponent.downloadDocument] Erro no download:', error);
+        this.documentsError = error.message || 'Erro ao baixar documento';
+        Swal.fire('Erro!', this.documentsError, 'error');
+      }
+    });
+  }
+
+  editDocument(document: CompanyDocument) {
+    console.log('✏️ [CompanyComponent.editDocument] ===== INICIANDO EDIÇÃO =====');
+    console.log('📄 [CompanyComponent.editDocument] Documento:', document);
+    this.editingDocument = document;
+    this.showEditModal = true;
+    this.initializeEditForm(document);
+    console.log('✅ [CompanyComponent.editDocument] Modal de edição aberto');
+  }
+
+  initializeEditForm(document: CompanyDocument) {
+    this.editForm = {
+      docType: document.docType,
+      docNumber: document.docNumber || '',
+      issuer: document.issuer || '',
+      issueDate: document.issueDate ? new Date(document.issueDate).toISOString().split('T')[0] : '',
+      expiresAt: document.expiresAt ? new Date(document.expiresAt).toISOString().split('T')[0] : '',
+      notes: document.notes || '',
+      file: null
+    };
+  }
+
+  closeEditModal() {
+    this.showEditModal = false;
+    this.editingDocument = null;
+    this.selectedEditFile = null;
+    this.editForm = {
+      docType: 'CNPJ',
+      file: null
+    };
+  }
+
+  onEditFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      // Validar tamanho (20MB)
+      if (file.size > 20 * 1024 * 1024) {
+        this.documentsError = 'Arquivo muito grande. Máximo 20MB.';
+        return;
+      }
+
+      // Validar tipo
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        this.documentsError = 'Tipo de arquivo não permitido. Use PDF, JPEG ou PNG.';
+        return;
+      }
+
+      this.selectedEditFile = file;
+      this.editForm.file = file;
+      this.documentsError = '';
+    }
+  }
+
+  updateDocument() {
+    if (!this.editingDocument) {
+      this.documentsError = 'Nenhum documento selecionado para edição';
+      return;
+    }
+
+    this.documentsLoading = true;
+    this.documentsError = '';
+
+    this.apiService.getCompanies().pipe(
+      switchMap(companies => {
+        if (companies.length === 0) {
+          throw new Error('Nenhuma empresa encontrada');
+        }
+        
+        const companyData = companies[0];
+        const company = companyData.company || companyData;
+        const companyId = company.id;
+        
+        if (!companyId) {
+          throw new Error('ID da empresa não encontrado');
+        }
+
+        // Se há um novo arquivo, fazer reupload (criar nova versão)
+        if (this.editForm.file) {
+          const uploadData: UploadDocumentRequest = {
+            docType: this.editForm.docType as any,
+            docNumber: this.editForm.docNumber,
+            issuer: this.editForm.issuer,
+            issueDate: this.editForm.issueDate,
+            expiresAt: this.editForm.expiresAt,
+            notes: this.editForm.notes,
+            file: this.editForm.file
+          };
+          return this.documentsService.reuploadDocument(companyId, this.editingDocument!.id, uploadData);
+        } else {
+          // Apenas atualizar metadados
+          const updateData = {
+            docType: this.editForm.docType as any,
+            docNumber: this.editForm.docNumber,
+            issuer: this.editForm.issuer,
+            issueDate: this.editForm.issueDate,
+            expiresAt: this.editForm.expiresAt,
+            notes: this.editForm.notes
+          };
+          return this.documentsService.updateDocument(companyId, this.editingDocument!.id, updateData);
+        }
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (document) => {
+        this.loadDocuments(); // Recarregar lista
+        this.closeEditModal();
+        this.documentsLoading = false;
+        Swal.fire('Sucesso!', 'Documento atualizado com sucesso!', 'success');
+      },
+      error: (error) => {
+        this.documentsError = error.message || 'Erro ao atualizar documento';
+        this.documentsLoading = false;
+        Swal.fire('Erro!', this.documentsError, 'error');
+      }
+    });
+  }
+
+  deleteDocument(document: CompanyDocument) {
+    console.log('🗑️ [CompanyComponent.deleteDocument] ===== INICIANDO EXCLUSÃO =====');
+    console.log('📄 [CompanyComponent.deleteDocument] Documento:', document);
+    
+    Swal.fire({
+      title: 'Tem certeza?',
+      text: 'Esta ação não pode ser desfeita!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sim, excluir!',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        console.log('✅ [CompanyComponent.deleteDocument] Confirmação recebida, excluindo...');
+        
+        this.apiService.getCompanies().pipe(
+          switchMap(companies => {
+            console.log('🏢 [CompanyComponent.deleteDocument] Empresas encontradas:', companies);
+            
+            if (companies.length === 0) {
+              throw new Error('Nenhuma empresa encontrada');
+            }
+            
+            const companyData = companies[0];
+            const company = companyData.company || companyData;
+            const companyId = company.id;
+            
+            console.log('🏢 [CompanyComponent.deleteDocument] CompanyId:', companyId);
+            
+            if (!companyId) {
+              throw new Error('ID da empresa não encontrado');
+            }
+
+            console.log('🗑️ [CompanyComponent.deleteDocument] Chamando deleteDocument...');
+            return this.documentsService.deleteDocument(companyId, document.id);
+          }),
+          takeUntil(this.destroy$)
+        ).subscribe({
+          next: () => {
+            console.log('✅ [CompanyComponent.deleteDocument] Documento excluído com sucesso');
+            this.loadDocuments(); // Recarregar lista
+            Swal.fire('Excluído!', 'Documento excluído com sucesso!', 'success');
+          },
+          error: (error) => {
+            console.error('❌ [CompanyComponent.deleteDocument] Erro na exclusão:', error);
+            console.error('❌ [CompanyComponent.deleteDocument] Status:', error.status);
+            console.error('❌ [CompanyComponent.deleteDocument] Message:', error.message);
+            console.error('❌ [CompanyComponent.deleteDocument] Error:', error.error);
+            this.documentsError = error.message || 'Erro ao excluir documento';
+            Swal.fire('Erro!', this.documentsError, 'error');
+          }
+        });
+      } else {
+        console.log('❌ [CompanyComponent.deleteDocument] Exclusão cancelada pelo usuário');
+      }
+    });
+  }
+
+  onDocTypeFilterChange() {
+    if (this.selectedDocType) {
+      this.filteredDocuments = this.documents.filter(doc => doc.docType === this.selectedDocType);
+    } else {
+      this.filteredDocuments = this.documents;
+    }
+  }
+
+  getDocumentTypeLabel(docType: string): string {
+    const type = this.docTypes.find(t => t.value === docType);
+    return type ? type.label : docType;
+  }
+
+  getDocumentStatus(document: CompanyDocument): 'valid' | 'warning' | 'expired' {
+    if (!document.expiresAt) return 'valid';
+    
+    const now = new Date();
+    const expirationDate = new Date(document.expiresAt);
+    const daysDiff = (expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+    
+    if (daysDiff < 0) return 'expired';
+    if (daysDiff <= 30) return 'warning';
+    return 'valid';
+  }
+
+  getDocumentStatusLabel(status: 'valid' | 'warning' | 'expired'): string {
+    const labels = {
+      'valid': 'Válido',
+      'warning': 'Expirando em breve',
+      'expired': 'Expirado'
+    };
+    return labels[status] || status;
+  }
+
+  formatFileSize(bytes?: number): string {
+    if (!bytes) return 'N/A';
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   }
 
   // ===== MÉTODOS GETTER PARA FORMULÁRIOS =====
