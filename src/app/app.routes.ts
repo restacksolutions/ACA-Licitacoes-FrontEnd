@@ -20,6 +20,8 @@ import { SettingsComponent } from './pages/settings/settings.component';
 import { ProfileComponent } from './pages/profile/profile.component';
 import { CompanyComponent } from './pages/company/company.component';
 import { DocumentsComponent } from './pages/documents/documents.component';
+import { LicitacoesListComponent } from './pages/licitacoes/licitacoes-list/licitacoes-list.component';
+import { LicitacaoDetailComponent } from './pages/licitacoes/licitacao-detail/licitacao-detail.component';
 
 // Auth pages (públicas)
 import { SignInComponent } from './pages/auth-pages/sign-in/sign-in.component';
@@ -106,6 +108,16 @@ export const routes: Routes = [
         path: 'documents',
         component: DocumentsComponent,
         title: 'Documentos - Sistema de Licitações'
+      },
+      {
+        path: 'licitacoes',
+        component: LicitacoesListComponent,
+        title: 'Licitações - Sistema de Licitações'
+      },
+      {
+        path: 'licitacoes/:id',
+        component: LicitacaoDetailComponent,
+        title: 'Detalhes da Licitação - Sistema de Licitações'
       },
     ],
   },

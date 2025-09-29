@@ -6,6 +6,7 @@ import { ApiService } from './api.service';
 export interface CompanyDocument {
   id: string;
   docType: 'CNPJ' | 'INSCRICAO_ESTADUAL' | 'INSCRICAO_MUNICIPAL' | 'ALVARA' | 'CONTRATO_SOCIAL' | 'CERTIFICADO_DIGITAL' | 'LICENCA_AMBIENTAL' | 'CERTIDAO_FGTS' | 'CERTIDAO_INSS' | 'CERTIDAO_TRABALHISTA' | 'CERTIDAO_MUNICIPAL' | 'OUTROS';
+  clientName: string;
   docNumber?: string;
   issuer?: string;
   issueDate?: string;
@@ -22,6 +23,7 @@ export interface CompanyDocument {
 
 export interface CreateDocumentRequest {
   docType: CompanyDocument['docType'];
+  clientName: string;
   docNumber?: string;
   issuer?: string;
   issueDate?: string;
@@ -31,6 +33,7 @@ export interface CreateDocumentRequest {
 
 export interface UploadDocumentRequest {
   docType: CompanyDocument['docType'];
+  clientName: string;
   docNumber?: string;
   issuer?: string;
   issueDate?: string;
@@ -41,6 +44,7 @@ export interface UploadDocumentRequest {
 
 export interface UpdateDocumentRequest {
   docType?: CompanyDocument['docType'];
+  clientName?: string;
   docNumber?: string;
   issuer?: string;
   issueDate?: string;

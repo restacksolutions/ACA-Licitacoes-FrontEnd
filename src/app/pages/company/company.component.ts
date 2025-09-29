@@ -94,12 +94,14 @@ export class CompanyComponent implements OnInit, OnDestroy {
   // Upload form
   uploadForm: UploadDocumentRequest = {
     docType: 'CNPJ',
+    clientName: '',
     file: null as any
   };
 
   // Edit form
   editForm: {
     docType: string;
+    clientName: string;
     docNumber?: string;
     issuer?: string;
     issueDate?: string;
@@ -108,6 +110,7 @@ export class CompanyComponent implements OnInit, OnDestroy {
     file?: File | null;
   } = {
     docType: 'CNPJ',
+    clientName: '',
     file: null
   };
 
@@ -835,6 +838,7 @@ export class CompanyComponent implements OnInit, OnDestroy {
   resetUploadForm() {
     this.uploadForm = {
       docType: 'CNPJ',
+      clientName: '',
       file: null as any
     };
     this.selectedFile = null;
@@ -964,6 +968,7 @@ export class CompanyComponent implements OnInit, OnDestroy {
   initializeEditForm(document: CompanyDocument) {
     this.editForm = {
       docType: document.docType,
+      clientName: document.clientName || '',
       docNumber: document.docNumber || '',
       issuer: document.issuer || '',
       issueDate: document.issueDate ? new Date(document.issueDate).toISOString().split('T')[0] : '',
@@ -979,6 +984,7 @@ export class CompanyComponent implements OnInit, OnDestroy {
     this.selectedEditFile = null;
     this.editForm = {
       docType: 'CNPJ',
+      clientName: '',
       file: null
     };
   }
@@ -1032,6 +1038,7 @@ export class CompanyComponent implements OnInit, OnDestroy {
         if (this.editForm.file) {
           const uploadData: UploadDocumentRequest = {
             docType: this.editForm.docType as any,
+            clientName: this.editForm.clientName || '',
             docNumber: this.editForm.docNumber,
             issuer: this.editForm.issuer,
             issueDate: this.editForm.issueDate,

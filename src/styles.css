@@ -264,13 +264,13 @@
 }
 
 @utility menu-dropdown-badge {
-  @apply text-brand-600 block rounded-full px-2.5 py-0.5 text-xs font-medium uppercase;
+  @apply text-brand-600 block rounded-full px-2 py-0.5 text-xs font-medium uppercase;
 }
 @utility menu-dropdown-badge-active { @apply bg-brand-100; }
 @utility menu-dropdown-badge-inactive { @apply bg-brand-50 group-hover:bg-brand-100 dark:bg-brand-500/15 dark:group-hover:bg-brand-500/20; }
 
 @utility menu-dropdown-badge-pro {
-  @apply text-brand-600 block rounded-full px-2.5 py-0.5 text-xs font-medium uppercase;
+  @apply text-brand-600 block rounded-full px-2 py-0.5 text-xs font-medium uppercase;
 }
 @utility menu-dropdown-badge-pro-active { @apply bg-brand-100; }
 @utility menu-dropdown-badge-pro-inactive { @apply bg-brand-50 group-hover:bg-brand-100 dark:bg-brand-500/15 dark:group-hover:bg-brand-500/20; }

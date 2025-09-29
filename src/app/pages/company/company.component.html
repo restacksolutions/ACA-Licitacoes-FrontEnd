@@ -377,8 +377,8 @@
                     </div>
                     <div class="ml-4 flex-1">
                       <div class="flex items-center">
-                        <h4 class="text-lg font-medium text-gray-900 dark:text-white">{{ getDocumentTypeLabel(document.docType) }}</h4>
-                        <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                        <h4 class="text-lg font-medium text-gray-900 dark:text-white">{{ document.clientName }} - {{ getDocumentTypeLabel(document.docType) }}</h4>
+                        <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
                               [class]="{
                                 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200': getDocumentStatus(document) === 'valid',
                                 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200': getDocumentStatus(document) === 'warning',
@@ -478,6 +478,20 @@
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Upload de Documento</h3>
         
         <form (ngSubmit)="uploadDocument()" class="space-y-4">
+          <!-- Client Name -->
+          <div>
+            <label for="clientName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome do Cliente *</label>
+            <input 
+              type="text" 
+              id="clientName" 
+              [(ngModel)]="uploadForm.clientName" 
+              name="clientName"
+              required
+              placeholder="Ex: Cliente ABC Ltda"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            >
+          </div>
+
           <!-- Doc Type -->
           <div>
             <label for="docType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de Documento *</label>
@@ -599,6 +613,20 @@
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Editar Documento</h3>
         
         <form (ngSubmit)="updateDocument()" class="space-y-4">
+          <!-- Client Name -->
+          <div>
+            <label for="editClientName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome do Cliente *</label>
+            <input 
+              type="text" 
+              id="editClientName" 
+              [(ngModel)]="editForm.clientName" 
+              name="editClientName"
+              required
+              placeholder="Ex: Cliente ABC Ltda"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            >
+          </div>
+
           <!-- Doc Type -->
           <div>
             <label for="editDocType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de Documento *</label>

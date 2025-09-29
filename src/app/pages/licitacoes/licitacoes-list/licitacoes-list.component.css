@@ -1,0 +1,95 @@
+/* Estilos específicos para o componente de licitações */
+.licitacao-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.licitacao-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.status-badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+}
+
+/* Animações para modais */
+.modal-enter {
+  animation: modalEnter 0.3s ease-out;
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Estilos para filtros */
+.filter-section {
+  background: #f9fafb;
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+/* Estilos para botões de ação */
+.action-button {
+  transition: all 0.2s ease-in-out;
+}
+
+.action-button:hover {
+  transform: translateY(-1px);
+}
+
+/* Estilos para paginação */
+.pagination-button {
+  transition: all 0.2s ease-in-out;
+}
+
+.pagination-button:hover {
+  background-color: #f3f4f6;
+}
+
+/* Estilos para estado vazio */
+.empty-state {
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+.empty-state svg {
+  margin: 0 auto 1rem;
+  color: #9ca3af;
+}
+
+/* Estilos para loading */
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Estilos responsivos */
+@media (max-width: 768px) {
+  .licitacao-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .licitacao-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+}

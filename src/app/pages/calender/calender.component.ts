@@ -6,14 +6,17 @@ import { EventInput, CalendarOptions, EventClickArg } from '@fullcalendar/core';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
+import { LicitacoesService, Licitacao, LicitacaoStatus, LicitacaoListResponse } from '../licitacoes/licitacoes-list/licitacoes.service';
+import { ApiService } from '../../core/services/api.service';
+import { switchMap } from 'rxjs/operators';
 
 interface TenderEvent extends EventInput {
   extendedProps: {
     tenderId: string;
-    status: string;
+    status: LicitacaoStatus;
     organ: string;
-    uf: string;
     modality: string;
+    saleValue?: string;
   };
 }
 
@@ -30,52 +33,129 @@ export class CalenderComponent implements OnInit {
 
   events: TenderEvent[] = [];
   calendarOptions!: CalendarOptions;
+  loading = false;
+  error: string | null = null;
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private licitacoesService: LicitacoesService,
+    private apiService: ApiService
+  ) {}
 
   ngOnInit() {
-    this.loadTenderEvents();
     this.initializeCalendar();
+    this.loadTenderEvents();
   }
 
   private loadTenderEvents() {
-    // Mock data for tender events
+    this.loading = true;
+    this.error = null;
+
+    this.apiService.getCompanies().pipe(
+      switchMap((companies: any[]) => {
+        if (companies.length === 0) {
+          throw new Error('Nenhuma empresa encontrada');
+        }
+        
+        const companyData = companies[0];
+        const company = companyData.company || companyData;
+        const companyId = company.id;
+        
+        if (!companyId) {
+          throw new Error('ID da empresa não encontrado');
+        }
+
+        return this.licitacoesService.getLicitacoes(companyId, { pageSize: 100 });
+      })
+    ).subscribe({
+      next: (response: LicitacaoListResponse) => {
+        this.events = this.convertLicitacoesToEvents(response.licitacoes);
+        this.loading = false;
+        
+        // Aguardar um pouco para garantir que o calendário esteja carregado
+        setTimeout(() => {
+          this.updateCalendarEvents();
+        }, 100);
+      },
+      error: (error: any) => {
+        this.error = error.message || 'Erro ao carregar licitações';
+        this.loading = false;
+        // Fallback para dados mock em caso de erro
+        this.loadMockEvents();
+      }
+    });
+  }
+
+  private convertLicitacoesToEvents(licitacoes: Licitacao[]): TenderEvent[] {
+    console.log('🔍 [Calendário] Convertendo licitações para eventos:', licitacoes);
+    
+    const events = licitacoes.map(licitacao => {
+      // Priorizar submissionDeadline (data de finalização), depois sessionAt, senão data atual
+      let eventDate = new Date();
+      let eventTitle = licitacao.title;
+      
+      if (licitacao.submissionDeadline) {
+        eventDate = new Date(licitacao.submissionDeadline);
+        eventTitle = `📅 ${licitacao.title}`; // Ícone para indicar prazo
+        console.log('📅 [Calendário] Usando submissionDeadline:', licitacao.submissionDeadline, 'Data:', eventDate);
+      } else if (licitacao.sessionAt) {
+        eventDate = new Date(licitacao.sessionAt);
+        eventTitle = `🏛️ ${licitacao.title}`; // Ícone para indicar sessão
+        console.log('🏛️ [Calendário] Usando sessionAt:', licitacao.sessionAt, 'Data:', eventDate);
+      }
+
+      // Adicionar informações adicionais no título
+      const organInfo = licitacao.orgao ? ` - ${licitacao.orgao}` : '';
+      const modalityInfo = licitacao.modalidade ? ` (${licitacao.modalidade})` : '';
+      const fullTitle = `${eventTitle}${organInfo}${modalityInfo}`;
+
+      const event = {
+        id: licitacao.id,
+        title: fullTitle,
+        start: eventDate.toISOString(),
+        allDay: true, // Eventos de dia inteiro
+        extendedProps: {
+          tenderId: licitacao.id,
+          status: licitacao.status,
+          organ: licitacao.orgao || 'N/A',
+          modality: licitacao.modalidade || 'N/A',
+          saleValue: licitacao.saleValue,
+          submissionDeadline: licitacao.submissionDeadline,
+          sessionAt: licitacao.sessionAt
+        }
+      };
+
+      console.log('✅ [Calendário] Evento criado:', event);
+      return event;
+    });
+
+    console.log('📊 [Calendário] Total de eventos criados:', events.length);
+    return events;
+  }
+
+  private loadMockEvents() {
+    // Fallback para dados mock em caso de erro
     this.events = [
       {
-        id: '1',
+        id: 'mock-1',
         title: 'Licitação de Veículos - SEDUC/PR',
         start: new Date().toISOString().split('T')[0],
         extendedProps: {
-          tenderId: '1',
-          status: 'ONGOING',
+          tenderId: 'mock-1',
+          status: 'open' as LicitacaoStatus,
           organ: 'SEDUC',
-          uf: 'PR',
           modality: 'Pregão Eletrônico'
         }
       },
       {
-        id: '2',
+        id: 'mock-2',
         title: 'Aquisição de Equipamentos - SESA/SP',
         start: new Date(Date.now() + 86400000).toISOString().split('T')[0],
         extendedProps: {
-          tenderId: '2',
-          status: 'SENT',
+          tenderId: 'mock-2',
+          status: 'closed' as LicitacaoStatus,
           organ: 'SESA',
-          uf: 'SP',
           modality: 'Concorrência'
-        }
-      },
-      {
-        id: '3',
-        title: 'Contratação de Serviços - SEFAZ/RJ',
-        start: new Date(Date.now() + 172800000).toISOString().split('T')[0],
-        end: new Date(Date.now() + 259200000).toISOString().split('T')[0],
-        extendedProps: {
-          tenderId: '3',
-          status: 'PREPARING',
-          organ: 'SEFAZ',
-          uf: 'RJ',
-          modality: 'Tomada de Preços'
         }
       }
     ];
@@ -86,52 +166,109 @@ export class CalenderComponent implements OnInit {
       plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
       initialView: 'dayGridMonth',
       headerToolbar: {
-        left: 'prev,next',
+        left: 'prev,next today',
         center: 'title',
         right: 'dayGridMonth,timeGridWeek,timeGridDay'
       },
       selectable: false,
-      events: this.events,
+      events: [], // Inicializar vazio
       eventClick: (info) => this.handleEventClick(info),
-      eventContent: (arg) => this.renderEventContent(arg)
+      eventContent: (arg) => this.renderEventContent(arg),
+      height: 'auto',
+      aspectRatio: 1.8,
+      dayMaxEvents: 3,
+      moreLinkClick: 'popover',
+      eventDisplay: 'block',
+      eventTextColor: 'white',
+      eventBackgroundColor: '#3b82f6'
     };
   }
 
   handleEventClick(clickInfo: EventClickArg) {
     const event = clickInfo.event as any;
     const tenderId = event.extendedProps.tenderId;
-    this.router.navigate(['/tenders', tenderId]);
+    
+    console.log('🔍 [Calendário] Clicou na licitação:', {
+      id: tenderId,
+      title: event.title,
+      status: event.extendedProps.status,
+      organ: event.extendedProps.organ,
+      modality: event.extendedProps.modality
+    });
+    
+    // Navegar para a página de detalhes da licitação
+    this.router.navigate(['/licitacoes', tenderId]);
   }
 
   renderEventContent(eventInfo: any) {
     const status = eventInfo.event.extendedProps.status;
     const colorClass = this.getStatusColorClass(status);
+    const statusLabel = this.getStatusLabel(status);
     
     return {
       html: `
-        <div class="event-fc-color flex fc-event-main ${colorClass} p-1 rounded-sm">
-          <div class="fc-daygrid-event-dot"></div>
-          <div class="fc-event-time">${eventInfo.timeText || ''}</div>
-          <div class="fc-event-title">${eventInfo.event.title}</div>
+        <div class="event-fc-color flex fc-event-main ${colorClass} p-2 rounded-sm cursor-pointer hover:opacity-80 transition-opacity">
+          <div class="fc-daygrid-event-dot mr-2"></div>
+          <div class="flex-1 min-w-0">
+            <div class="fc-event-title text-sm font-medium truncate">${eventInfo.event.title}</div>
+            <div class="fc-event-status text-xs opacity-75 mt-1">${statusLabel}</div>
+          </div>
         </div>
       `
     };
   }
 
-  private getStatusColorClass(status: string): string {
+  private getStatusColorClass(status: LicitacaoStatus): string {
     switch (status) {
-      case 'ONGOING':
-        return 'fc-bg-primary';
-      case 'SENT':
-        return 'fc-bg-warning';
-      case 'PREPARING':
-        return 'fc-bg-success';
-      case 'WON':
-        return 'fc-bg-success';
-      case 'LOST':
-        return 'fc-bg-danger';
+      case 'draft':
+        return 'fc-bg-gray-500';
+      case 'open':
+        return 'fc-bg-blue-500';
+      case 'closed':
+        return 'fc-bg-gray-600';
+      case 'cancelled':
+        return 'fc-bg-red-500';
+      case 'awarded':
+        return 'fc-bg-green-500';
       default:
-        return 'fc-bg-primary';
+        return 'fc-bg-blue-500';
+    }
+  }
+
+  private getStatusLabel(status: LicitacaoStatus): string {
+    switch (status) {
+      case 'draft':
+        return 'Rascunho';
+      case 'open':
+        return 'Aberta';
+      case 'closed':
+        return 'Fechada';
+      case 'cancelled':
+        return 'Cancelada';
+      case 'awarded':
+        return 'Homologada';
+      default:
+        return 'Desconhecido';
+    }
+  }
+
+  private updateCalendarEvents() {
+    console.log('🔄 [Calendário] Atualizando eventos do calendário...');
+    console.log('📋 [Calendário] Eventos para adicionar:', this.events);
+    
+    if (this.calendarComponent) {
+      const calendarApi = this.calendarComponent.getApi();
+      calendarApi.removeAllEvents();
+      
+      // Adicionar cada evento individualmente
+      this.events.forEach(event => {
+        calendarApi.addEvent(event);
+        console.log('➕ [Calendário] Evento adicionado:', event.title);
+      });
+      
+      console.log('✅ [Calendário] Eventos atualizados no calendário');
+    } else {
+      console.warn('⚠️ [Calendário] CalendarComponent não encontrado');
     }
   }
 }

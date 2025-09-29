@@ -20,11 +20,14 @@ export class DocumentsComponent implements OnInit {
   showUploadModal = false;
   uploadForm: UploadDocumentRequest = {
     docType: 'CNPJ',
+    clientName: '',
     file: null as any
   };
 
   // Filtros
   selectedDocType: string = '';
+  selectedStatus: string = '';
+  searchTerm: string = '';
   currentPage = 1;
   pageSize = 10;
   totalPages = 0;
@@ -42,7 +45,19 @@ export class DocumentsComponent implements OnInit {
     { value: 'CERTIDAO_INSS', label: 'Certidão INSS' },
     { value: 'CERTIDAO_TRABALHISTA', label: 'Certidão Trabalhista' },
     { value: 'CERTIDAO_MUNICIPAL', label: 'Certidão Municipal' },
+    { value: 'CRLV', label: 'CRLV' },
+    { value: 'IPVA', label: 'IPVA' },
+    { value: 'SEGURO', label: 'Seguro' },
     { value: 'OUTROS', label: 'Outros' }
+  ];
+
+  // Status de documento disponíveis
+  statusOptions = [
+    { value: '', label: 'Todos os status' },
+    { value: 'Válido', label: 'Válido' },
+    { value: 'À vencer', label: 'À vencer' },
+    { value: 'Expirado', label: 'Expirado' },
+    { value: 'Sem validade', label: 'Sem validade' }
   ];
 
   constructor(
@@ -79,6 +94,14 @@ export class DocumentsComponent implements OnInit {
 
         if (this.selectedDocType) {
           params.docType = this.selectedDocType;
+        }
+
+        if (this.selectedStatus) {
+          params.status = this.selectedStatus;
+        }
+
+        if (this.searchTerm) {
+          params.search = this.searchTerm;
         }
 
         return this.documentsService.getDocuments(companyId, params);
@@ -131,6 +154,7 @@ export class DocumentsComponent implements OnInit {
   resetUploadForm() {
     this.uploadForm = {
       docType: 'CNPJ',
+      clientName: '',
       file: null as any
     };
     this.selectedFile = null;
@@ -246,16 +270,40 @@ export class DocumentsComponent implements OnInit {
     return type ? type.label : docType;
   }
 
-  getDocumentStatus(document: CompanyDocument): 'valid' | 'expiring_soon' | 'expired' {
+  getDocumentStatus(document: CompanyDocument): string {
+    // Usar o status calculado do backend se disponível
+    if ((document as any).status) {
+      return (document as any).status;
+    }
+    
+    // Fallback para cálculo local
     return this.documentsService.getDocumentStatus(document);
   }
 
-  getDocumentStatusLabel(status: 'valid' | 'expiring_soon' | 'expired'): string {
-    return this.documentsService.getDocumentStatusLabel(status);
+  getDocumentStatusLabel(status: string): string {
+    const statusMap: { [key: string]: string } = {
+      'Válido': 'Válido',
+      'À vencer': 'À vencer',
+      'Expirado': 'Expirado',
+      'Sem validade': 'Sem validade',
+      'valid': 'Válido',
+      'expiring_soon': 'À vencer',
+      'expired': 'Expirado'
+    };
+    return statusMap[status] || status;
   }
 
-  getDocumentStatusColor(status: 'valid' | 'expiring_soon' | 'expired'): string {
-    return this.documentsService.getDocumentStatusColor(status);
+  getDocumentStatusColor(status: string): string {
+    const colorMap: { [key: string]: string } = {
+      'Válido': 'bg-green-100 text-green-800',
+      'À vencer': 'bg-yellow-100 text-yellow-800',
+      'Expirado': 'bg-red-100 text-red-800',
+      'Sem validade': 'bg-gray-100 text-gray-800',
+      'valid': 'bg-green-100 text-green-800',
+      'expiring_soon': 'bg-yellow-100 text-yellow-800',
+      'expired': 'bg-red-100 text-red-800'
+    };
+    return colorMap[status] || 'bg-gray-100 text-gray-800';
   }
 
   formatFileSize(bytes?: number): string {
@@ -271,6 +319,24 @@ export class DocumentsComponent implements OnInit {
   }
 
   onDocTypeFilterChange() {
+    this.currentPage = 1;
+    this.loadDocuments();
+  }
+
+  onStatusFilterChange() {
+    this.currentPage = 1;
+    this.loadDocuments();
+  }
+
+  onSearchChange() {
+    this.currentPage = 1;
+    this.loadDocuments();
+  }
+
+  clearFilters() {
+    this.selectedDocType = '';
+    this.selectedStatus = '';
+    this.searchTerm = '';
     this.currentPage = 1;
     this.loadDocuments();
   }

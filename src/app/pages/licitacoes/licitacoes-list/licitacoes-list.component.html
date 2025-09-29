@@ -1,0 +1,391 @@
+<div class="p-6">
+  <!-- Header -->
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 mb-2">Licitações</h1>
+    <p class="text-gray-600">Gerencie as licitações da sua empresa</p>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="error" class="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+    <div class="flex">
+      <div class="flex-shrink-0">
+        <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+        </svg>
+      </div>
+      <div class="ml-3">
+        <h3 class="text-sm font-medium text-red-800">Erro</h3>
+        <div class="mt-2 text-sm text-red-700">{{ error }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="mb-6 space-y-4">
+    <!-- Filters Row -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <!-- Search -->
+      <div class="md:col-span-2">
+        <label for="searchTerm" class="block text-sm font-medium text-gray-700 mb-1">Buscar:</label>
+        <input 
+          type="text" 
+          id="searchTerm" 
+          [(ngModel)]="searchTerm" 
+          (input)="onSearchChange()"
+          placeholder="Título, órgão, modalidade..."
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+      </div>
+
+      <!-- Status Filter -->
+      <div>
+        <label for="statusFilter" class="block text-sm font-medium text-gray-700 mb-1">Status:</label>
+        <select 
+          id="statusFilter" 
+          [(ngModel)]="selectedStatus" 
+          (change)="onStatusFilterChange()"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option *ngFor="let status of statusOptions" [value]="status.value">{{ status.label }}</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Actions Row -->
+    <div class="flex flex-col sm:flex-row gap-4 justify-between">
+      <div class="flex gap-2">
+        <button 
+          (click)="clearFilters()"
+          class="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+          Limpar Filtros
+        </button>
+      </div>
+
+      <div class="flex items-center">
+        <button 
+          (click)="openCreateModal()"
+          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          Nova Licitação
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="flex justify-center items-center py-8">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    <span class="ml-2 text-gray-600">Carregando...</span>
+  </div>
+
+  <!-- Licitações List -->
+  <div *ngIf="!loading" class="bg-white shadow overflow-hidden sm:rounded-md">
+    <ul class="divide-y divide-gray-200">
+      <li *ngFor="let licitacao of licitacoes" class="px-6 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex-1">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <svg class="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+              </div>
+              <div class="ml-4 flex-1">
+                <div class="flex items-center">
+                  <h3 class="text-lg font-medium text-gray-900">{{ licitacao.title }}</h3>
+                  <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                        [class]="getStatusColor(licitacao.status)">
+                    {{ getStatusLabel(licitacao.status) }}
+                  </span>
+                </div>
+                <div class="mt-1 text-sm text-gray-500">
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <div *ngIf="licitacao.orgao">
+                      <span class="font-medium">Órgão:</span> {{ licitacao.orgao }}
+                    </div>
+                    <div *ngIf="licitacao.modalidade">
+                      <span class="font-medium">Modalidade:</span> {{ licitacao.modalidade }}
+                    </div>
+                    <div *ngIf="licitacao.saleValue">
+                      <span class="font-medium">Valor:</span> {{ formatCurrency(licitacao.saleValue) }}
+                    </div>
+                    <div *ngIf="licitacao.sessionAt">
+                      <span class="font-medium">Sessão:</span> {{ formatDate(licitacao.sessionAt) }}
+                    </div>
+                    <div *ngIf="licitacao.submissionDeadline">
+                      <span class="font-medium">Prazo:</span> {{ formatDate(licitacao.submissionDeadline) }}
+                    </div>
+                    <div *ngIf="licitacao.documents && licitacao.documents.length > 0">
+                      <span class="font-medium">Documentos:</span> 
+                      <span class="text-green-600">{{ licitacao.documents.length }} arquivo(s)</span>
+                    </div>
+                  </div>
+                  <div *ngIf="licitacao.notes" class="mt-2">
+                    <span class="font-medium">Observações:</span> {{ licitacao.notes }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button 
+              (click)="openAnaliseModal(licitacao)"
+              *ngIf="licitacao.documents && licitacao.documents.length > 0"
+              class="inline-flex items-center px-3 py-2 border border-green-300 shadow-sm text-sm leading-4 font-medium rounded-md text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            >
+              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              Analisar Edital
+            </button>
+            <button 
+              [routerLink]="['/licitacoes', licitacao.id]"
+              class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+              </svg>
+              Ver Detalhes
+            </button>
+            <button 
+              (click)="deleteLicitacao(licitacao)"
+              class="inline-flex items-center px-3 py-2 border border-red-300 shadow-sm text-sm leading-4 font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            >
+              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+              Excluir
+            </button>
+          </div>
+        </div>
+      </li>
+    </ul>
+
+    <!-- Empty State -->
+    <div *ngIf="licitacoes.length === 0" class="text-center py-12">
+      <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+      </svg>
+      <h3 class="mt-2 text-sm font-medium text-gray-900">Nenhuma licitação</h3>
+      <p class="mt-1 text-sm text-gray-500">Comece criando uma nova licitação.</p>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div *ngIf="totalPages > 1" class="mt-6 flex items-center justify-between">
+    <div class="text-sm text-gray-700">
+      Página {{ currentPage }} de {{ totalPages }}
+    </div>
+    <div class="flex space-x-2">
+      <button 
+        *ngFor="let page of getPageNumbers()" 
+        (click)="onPageChange(page)"
+        [class]="{
+          'bg-blue-600 text-white': page === currentPage,
+          'bg-white text-gray-700 border border-gray-300': page !== currentPage
+        }"
+        class="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-50"
+      >
+        {{ page }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Modal -->
+<div *ngIf="showCreateModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+  <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Nova Licitação</h3>
+      
+      <form (ngSubmit)="createLicitacao()" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Title -->
+          <div class="md:col-span-2">
+            <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Título *</label>
+            <input 
+              type="text" 
+              id="title" 
+              [(ngModel)]="createForm.title" 
+              name="title"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Ex: Licitação para Fornecimento de Equipamentos"
+            >
+          </div>
+
+          <!-- Órgão -->
+          <div>
+            <label for="orgao" class="block text-sm font-medium text-gray-700 mb-1">Órgão</label>
+            <input 
+              type="text" 
+              id="orgao" 
+              [(ngModel)]="createForm.orgao" 
+              name="orgao"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Ex: Prefeitura Municipal"
+            >
+          </div>
+
+          <!-- Modalidade -->
+          <div>
+            <label for="modalidade" class="block text-sm font-medium text-gray-700 mb-1">Modalidade</label>
+            <input 
+              type="text" 
+              id="modalidade" 
+              [(ngModel)]="createForm.modalidade" 
+              name="modalidade"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Ex: Pregão Eletrônico"
+            >
+          </div>
+
+          <!-- Edital PDF -->
+          <div class="md:col-span-2">
+            <label for="editalFile" class="block text-sm font-medium text-gray-700 mb-1">Edital PDF</label>
+            <input 
+              type="file" 
+              id="editalFile" 
+              (change)="onEditalFileSelected($event)"
+              accept=".pdf"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+            <p class="text-xs text-gray-500 mt-1">Selecione o arquivo PDF do edital (máximo 20MB)</p>
+            <div *ngIf="selectedEditalFile" class="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+              <div class="flex items-center">
+                <svg class="w-4 h-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span class="text-sm text-green-700">{{ selectedEditalFile.name }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Session At -->
+          <div>
+            <label for="sessionAt" class="block text-sm font-medium text-gray-700 mb-1">Data da Sessão</label>
+            <input 
+              type="datetime-local" 
+              id="sessionAt" 
+              [(ngModel)]="createForm.sessionAt" 
+              name="sessionAt"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+          </div>
+
+          <!-- Submission Deadline -->
+          <div>
+            <label for="submissionDeadline" class="block text-sm font-medium text-gray-700 mb-1">Prazo de Submissão</label>
+            <input 
+              type="datetime-local" 
+              id="submissionDeadline" 
+              [(ngModel)]="createForm.submissionDeadline" 
+              name="submissionDeadline"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+          </div>
+
+          <!-- Status -->
+          <div>
+            <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select 
+              id="status" 
+              [(ngModel)]="createForm.status" 
+              name="status"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="draft">Rascunho</option>
+              <option value="open">Aberta</option>
+              <option value="closed">Fechada</option>
+              <option value="cancelled">Cancelada</option>
+              <option value="awarded">Homologada</option>
+            </select>
+          </div>
+
+          <!-- Sale Value -->
+          <div>
+            <label for="saleValue" class="block text-sm font-medium text-gray-700 mb-1">Valor Estimado</label>
+            <input 
+              type="number" 
+              step="0.01"
+              id="saleValue" 
+              [(ngModel)]="createForm.saleValue" 
+              name="saleValue"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="150000.50"
+            >
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div>
+          <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+          <textarea 
+            id="notes" 
+            [(ngModel)]="createForm.notes" 
+            name="notes"
+            rows="3"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Observações sobre a licitação..."
+          ></textarea>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-end space-x-3 pt-4">
+          <button 
+            type="button" 
+            (click)="closeCreateModal()"
+            class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            Cancelar
+          </button>
+          <button 
+            type="submit" 
+            [disabled]="loading || !createForm.title"
+            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span *ngIf="loading">Criando...</span>
+            <span *ngIf="!loading">Criar Licitação</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Análise Modal -->
+<div *ngIf="showAnaliseModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+  <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Analisar Edital</h3>
+      <p class="text-sm text-gray-600 mb-4">
+        Deseja analisar o edital da licitação "{{ selectedLicitacao?.title }}" para identificar documentos requeridos?
+      </p>
+      
+      <div class="flex justify-end space-x-3">
+        <button 
+          (click)="closeAnaliseModal()"
+          class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          Cancelar
+        </button>
+        <button 
+          (click)="analisarEdital()"
+          [disabled]="loading"
+          class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span *ngIf="loading">Analisando...</span>
+          <span *ngIf="!loading">Analisar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

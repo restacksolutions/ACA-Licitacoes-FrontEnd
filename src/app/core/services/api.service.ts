@@ -313,6 +313,7 @@ export class ApiService {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('docType', documentData.docType);
+    formData.append('clientName', documentData.clientName);
     if (documentData.docNumber) formData.append('docNumber', documentData.docNumber);
     if (documentData.issuer) formData.append('issuer', documentData.issuer);
     if (documentData.issueDate) formData.append('issueDate', documentData.issueDate);
@@ -355,6 +356,7 @@ export class ApiService {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('docType', documentData.docType);
+    formData.append('clientName', documentData.clientName);
     if (documentData.docNumber) formData.append('docNumber', documentData.docNumber);
     if (documentData.issuer) formData.append('issuer', documentData.issuer);
     if (documentData.issueDate) formData.append('issueDate', documentData.issueDate);

@@ -1,129 +1,358 @@
-# Sistema de Controle de Licitações
+# 🎨 ACA Licitações Frontend
 
-Sistema completo para controle e gestão de licitações públicas, desenvolvido com Angular 20 e FastAPI.
+Frontend do sistema de licitações desenvolvido em **Angular + Tailwind CSS**.
 
-## 🚀 Tecnologias
+## 🚀 Quick Start
 
-### Frontend
-- **Angular 20** - Framework principal
-- **Tailwind CSS** - Estilização
-- **TypeScript** - Linguagem de programação
-- **RxJS** - Programação reativa
+### Com Docker (Recomendado)
 
-### Dados
-- **Dados Fictícios** - Sistema funciona com dados mockados
-- **LocalStorage** - Persistência local de dados
-- **Observables** - Simulação de chamadas de API
-
-## 📋 Funcionalidades
-
-### ✅ Implementado
-- [x] Interface de navegação do sistema
-- [x] Dados fictícios de licitações
-- [x] Dados fictícios de veículos
-- [x] Serviços mockados para simulação de API
-- [x] Estrutura de componentes Angular
-- [x] Sistema de roteamento
-
-### 🚧 Em Desenvolvimento
-- [ ] Sistema de autenticação
-- [ ] Upload de editais
-- [ ] CRUD completo de veículos
-- [ ] Sistema de compatibilidade
-- [ ] Geração de documentos
-- [ ] Kanban de prazos
-- [ ] Relatórios
-
-## 🛠️ Instalação
-
-### Pré-requisitos
-- Node.js 18+
-- Angular CLI
-
-### Frontend
 ```bash
-# Instalar dependências
+# 1. Iniciar todos os serviços
+docker-compose up -d
+
+# 2. Acessar aplicação
+# http://localhost:4200
+```
+
+### Desenvolvimento Local
+
+```bash
+# 1. Instalar dependências
 npm install
 
-# Executar em modo de desenvolvimento
-ng serve
+# 2. Iniciar em modo desenvolvimento
+npm start
 
-# Acessar em http://localhost:4200
+# 3. Acessar aplicação
+# http://localhost:4200
 ```
+
+## 📁 Estrutura
+
+```
+src/
+├── app/
+│   ├── components/              # Componentes reutilizáveis
+│   ├── pages/                   # Páginas da aplicação
+│   ├── services/                # Serviços Angular
+│   ├── guards/                  # Guards de rota
+│   ├── interceptors/            # Interceptors HTTP
+│   ├── models/                  # Interfaces/Models
+│   └── shared/                  # Componentes compartilhados
+├── assets/                      # Assets estáticos
+├── environments/                # Configurações de ambiente
+└── styles/                      # Estilos globais
+```
+
+## 🎨 Tecnologias
+
+- **Angular 20**: Framework principal
+- **Tailwind CSS**: Framework de estilos
+- **Angular Material**: Componentes UI
+- **RxJS**: Programação reativa
+- **Axios**: Cliente HTTP
+- **SweetAlert2**: Alertas e modais
 
 ## 🔧 Configuração
 
-### Dados Fictícios
-O sistema funciona com dados fictícios pré-carregados:
+### Variáveis de Ambiente
 
-- **Licitações**: 5 licitações de exemplo com diferentes status
-- **Veículos**: 6 veículos de exemplo com especificações completas
-- **Usuários**: 3 usuários de exemplo (Admin, Analista, Técnico)
-
-### Credenciais de Teste
-Para testar o sistema (quando a autenticação for implementada):
-- **Admin**: admin@sistema.com / senha123
-- **Analista**: analista@sistema.com / senha123
-- **Técnico**: tecnico@sistema.com / senha123
-
-## 📁 Estrutura do Projeto
-
+```typescript
+// environments/environment.ts
+export const environment = {
+  production: false,
+  apiUrl: 'http://localhost:3000',
+  appName: 'ACA Licitações'
+};
 ```
-VV-Licitacoes/
-├── src/                    # Frontend Angular
-│   ├── app/
-│   │   ├── core/          # Serviços e guards
-│   │   │   └── services/  # Serviços com dados fictícios
-│   │   ├── pages/         # Páginas da aplicação
-│   │   │   ├── tenders/   # Páginas de licitações
-│   │   │   ├── vehicles/  # Páginas de veículos
-│   │   │   └── reports/   # Páginas de relatórios
-│   │   └── shared/        # Componentes compartilhados
-│   └── environments/      # Configurações de ambiente
-├── backend/               # Backend (removido temporariamente)
-└── README.md
+
+### Proxy para API
+
+```json
+// proxy.conf.json
+{
+  "/api/*": {
+    "target": "http://localhost:3000",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  }
+}
+```
+
+## 🚀 Scripts Disponíveis
+
+```bash
+# Desenvolvimento
+npm start                    # Servidor de desenvolvimento
+npm run start:proxy         # Com proxy para API
+
+# Build
+npm run build               # Build para produção
+npm run build:dev           # Build para desenvolvimento
+
+# Testes
+npm test                    # Testes unitários
+npm run test:watch          # Testes em modo watch
+
+# Linting
+npm run lint                # ESLint
+```
+
+## 🐳 Docker
+
+### Build e Run
+
+```bash
+# Build da imagem
+docker build -t aca-frontend .
+
+# Executar container
+docker run -p 4200:80 aca-frontend
+
+# Com docker-compose
+docker-compose up -d
+```
+
+### Nginx Configuration
+
+```nginx
+# nginx.conf
+server {
+    listen 80;
+    server_name localhost;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # SPA routing
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # API proxy
+    location /api/ {
+        proxy_pass http://aca-backend:3000/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
 ```
 
 ## 🔐 Autenticação
 
-**Status**: Temporariamente desabilitada
+### Serviço de Auth
 
-O sistema foi projetado para utilizar JWT com três níveis de acesso:
-- **ADMIN**: Acesso total ao sistema
-- **ANALYST**: Análise de licitações e veículos
-- **TECH**: Operações técnicas
+```typescript
+// services/auth.service.ts
+@Injectable()
+export class AuthService {
+  login(credentials: LoginDto): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>('/api/v1/auth/login', credentials);
+  }
 
-## 📊 Dados
+  register(data: RegisterDto): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>('/api/v1/auth/register', data);
+  }
 
-### Estrutura dos Dados Fictícios
-- **Licitações**: Título, órgão, UF, modalidade, objeto, status, prazos
-- **Veículos**: Nome, versão, especificações técnicas completas
-- **Usuários**: Email, nome, role, empresa
+  refreshToken(): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>('/api/v1/auth/refresh', {
+      refresh_token: this.getRefreshToken()
+    });
+  }
+}
+```
+
+### Guard de Rota
+
+```typescript
+// guards/auth.guard.ts
+@Injectable()
+export class AuthGuard implements CanActivate {
+  canActivate(): boolean {
+    return this.authService.isAuthenticated();
+  }
+}
+```
+
+## 🎨 Componentes
+
+### Layout Principal
+
+```typescript
+// components/layout/main-layout.component.ts
+@Component({
+  selector: 'app-main-layout',
+  template: `
+    <div class="min-h-screen bg-gray-100">
+      <app-header></app-header>
+      <main class="container mx-auto px-4 py-8">
+        <router-outlet></router-outlet>
+      </main>
+      <app-footer></app-footer>
+    </div>
+  `
+})
+export class MainLayoutComponent {}
+```
+
+### Formulário de Login
+
+```typescript
+// components/auth/login-form.component.ts
+@Component({
+  selector: 'app-login-form',
+  template: `
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+      <input formControlName="email" type="email" placeholder="Email">
+      <input formControlName="password" type="password" placeholder="Senha">
+      <button type="submit" [disabled]="loginForm.invalid">
+        Entrar
+      </button>
+    </form>
+  `
+})
+export class LoginFormComponent {}
+```
+
+## 📱 Responsividade
+
+### Breakpoints Tailwind
+
+```css
+/* Mobile First */
+.container {
+  @apply px-4;
+}
+
+/* Tablet */
+@media (min-width: 768px) {
+  .container {
+    @apply px-6;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  .container {
+    @apply px-8;
+  }
+}
+```
+
+## 🧪 Testes
+
+### Teste de Componente
+
+```typescript
+// components/auth/login-form.component.spec.ts
+describe('LoginFormComponent', () => {
+  let component: LoginFormComponent;
+  let fixture: ComponentFixture<LoginFormComponent>;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      declarations: [LoginFormComponent],
+      imports: [ReactiveFormsModule]
+    });
+    fixture = TestBed.createComponent(LoginFormComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+});
+```
 
 ## 🚀 Deploy
 
-### Desenvolvimento Local
+### Build para Produção
+
 ```bash
-ng serve
+# Build otimizado
+npm run build
+
+# Arquivos gerados em dist/ng-tailadmin/
 ```
 
-### Produção
-```bash
-ng build --configuration production
+### Docker para Produção
+
+```dockerfile
+# Multi-stage build
+FROM node:18-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=builder /app/dist/ng-tailadmin /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/nginx.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
 ```
 
-## 🤝 Contribuição
+## 🔧 Desenvolvimento
 
-1. Fork o projeto
-2. Crie uma branch para sua feature
-3. Commit suas mudanças
-4. Push para a branch
-5. Abra um Pull Request
+### Adicionar Nova Página
 
-## 📄 Licença
+```bash
+# Gerar componente
+ng generate component pages/nova-pagina
 
-Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+# Gerar serviço
+ng generate service services/nova-pagina
 
-## 📞 Suporte
+# Gerar guard
+ng generate guard guards/nova-pagina
+```
 
-Para suporte, entre em contato através dos canais oficiais do projeto.
+### Adicionar Nova Rota
+
+```typescript
+// app-routing.module.ts
+const routes: Routes = [
+  { path: 'nova-pagina', component: NovaPaginaComponent },
+  { path: 'nova-pagina/:id', component: NovaPaginaDetailComponent }
+];
+```
+
+## 📚 Documentação
+
+- **Angular Docs**: https://angular.io/docs
+- **Tailwind CSS**: https://tailwindcss.com/docs
+- **Angular Material**: https://material.angular.io/
+
+## ❓ Troubleshooting
+
+### Problemas Comuns
+
+#### 1. **Erro de CORS**
+```typescript
+// Adicionar proxy no angular.json
+"serve": {
+  "builder": "@angular-devkit/build-angular:dev-server",
+  "options": {
+    "proxyConfig": "proxy.conf.json"
+  }
+}
+```
+
+#### 2. **Erro de Build**
+```bash
+# Limpar cache
+npm run clean
+rm -rf node_modules
+npm install
+```
+
+#### 3. **Erro de Rota**
+```typescript
+// Verificar se a rota está registrada
+// app-routing.module.ts
+```
+
+---
+
+**Desenvolvido com ❤️ pela equipe ACA**
