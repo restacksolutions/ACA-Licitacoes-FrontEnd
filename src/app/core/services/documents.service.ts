@@ -5,7 +5,7 @@ import { ApiService } from './api.service';
 
 export interface CompanyDocument {
   id: string;
-  docType: 'CNPJ' | 'INSCRICAO_ESTADUAL' | 'INSCRICAO_MUNICIPAL' | 'ALVARA' | 'CONTRATO_SOCIAL' | 'CERTIFICADO_DIGITAL' | 'LICENCA_AMBIENTAL' | 'CERTIDAO_FGTS' | 'CERTIDAO_INSS' | 'CERTIDAO_TRABALHISTA' | 'CERTIDAO_MUNICIPAL' | 'OUTROS';
+  docType: 'cnpj' | 'inscricao_estadual' | 'certidao' | 'procuracao' | 'outro';
   clientName: string;
   docNumber?: string;
   issuer?: string;
@@ -69,7 +69,7 @@ export class DocumentsService {
   /**
    * Obtém todos os documentos de uma empresa
    */
-  getDocuments(companyId: string, params?: { docType?: string; page?: number; pageSize?: number }): Observable<{ documents: CompanyDocument[]; pagination: any }> {
+  getDocuments(companyId: string, params?: { docType?: string; page?: number; limit?: number }): Observable<{ documents: CompanyDocument[]; pagination: any }> {
     return this.apiService.getDocuments(companyId, params);
   }
 
@@ -225,18 +225,11 @@ export class DocumentsService {
    */
   getDocumentTypeLabel(docType: CompanyDocument['docType']): string {
     const labels: { [key in CompanyDocument['docType']]: string } = {
-      'CNPJ': 'CNPJ',
-      'INSCRICAO_ESTADUAL': 'Inscrição Estadual',
-      'INSCRICAO_MUNICIPAL': 'Inscrição Municipal',
-      'ALVARA': 'Alvará',
-      'CONTRATO_SOCIAL': 'Contrato Social',
-      'CERTIFICADO_DIGITAL': 'Certificado Digital',
-      'LICENCA_AMBIENTAL': 'Licença Ambiental',
-      'CERTIDAO_FGTS': 'Certidão FGTS',
-      'CERTIDAO_INSS': 'Certidão INSS',
-      'CERTIDAO_TRABALHISTA': 'Certidão Trabalhista',
-      'CERTIDAO_MUNICIPAL': 'Certidão Municipal',
-      'OUTROS': 'Outros'
+      'cnpj': 'CNPJ',
+      'inscricao_estadual': 'Inscrição Estadual',
+      'certidao': 'Certidão',
+      'procuracao': 'Procuração',
+      'outro': 'Outros'
     };
     return labels[docType] || docType;
   }

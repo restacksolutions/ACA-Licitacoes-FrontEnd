@@ -321,18 +321,17 @@
 
       <!-- Controls -->
       <div class="flex flex-col sm:flex-row gap-4">
-        <!-- Filter -->
+        <!-- Search -->
         <div class="flex-1">
-          <label for="docTypeFilter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Filtrar por tipo:</label>
-          <select 
-            id="docTypeFilter" 
-            [(ngModel)]="selectedDocType" 
-            (change)="onDocTypeFilterChange()"
+          <label for="documentSearch" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Buscar documentos:</label>
+          <input 
+            type="text" 
+            id="documentSearch" 
+            [(ngModel)]="documentSearchTerm" 
+            (input)="onDocumentSearchChange()"
+            placeholder="Buscar por tipo, cliente, número ou observações..."
             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
           >
-            <option value="">Todos os tipos</option>
-            <option *ngFor="let type of docTypes" [value]="type.value">{{ type.label }}</option>
-          </select>
         </div>
 
         <!-- Upload Button -->
@@ -414,29 +413,6 @@
                       </div>
                     </div>
                   </div>
-                </div>
-                <div class="flex items-center space-x-2">
-                  <button 
-                    (click)="downloadDocument(document)"
-                    class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    <i class="fas fa-download mr-1"></i>
-                    Baixar
-                  </button>
-                  <button 
-                    (click)="editDocument(document)"
-                    class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    <i class="fas fa-edit mr-1"></i>
-                    Editar
-                  </button>
-                  <button 
-                    (click)="deleteDocument(document)"
-                    class="inline-flex items-center px-3 py-2 border border-red-300 dark:border-red-600 shadow-sm text-sm leading-4 font-medium rounded-md text-red-700 dark:text-red-300 bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                  >
-                    <i class="fas fa-trash mr-1"></i>
-                    Excluir
-                  </button>
                 </div>
               </div>
             </div>

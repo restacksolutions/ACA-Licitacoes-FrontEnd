@@ -19,7 +19,7 @@ export class DocumentsComponent implements OnInit {
   selectedFile: File | null = null;
   showUploadModal = false;
   uploadForm: UploadDocumentRequest = {
-    docType: 'CNPJ',
+    docType: 'cnpj',
     clientName: '',
     file: null as any
   };
@@ -32,23 +32,13 @@ export class DocumentsComponent implements OnInit {
   pageSize = 10;
   totalPages = 0;
 
-  // Tipos de documento disponíveis
+  // Tipos de documento disponíveis (valores em minúsculas para o backend)
   docTypes = [
-    { value: 'CNPJ', label: 'CNPJ' },
-    { value: 'INSCRICAO_ESTADUAL', label: 'Inscrição Estadual' },
-    { value: 'INSCRICAO_MUNICIPAL', label: 'Inscrição Municipal' },
-    { value: 'ALVARA', label: 'Alvará' },
-    { value: 'CONTRATO_SOCIAL', label: 'Contrato Social' },
-    { value: 'CERTIFICADO_DIGITAL', label: 'Certificado Digital' },
-    { value: 'LICENCA_AMBIENTAL', label: 'Licença Ambiental' },
-    { value: 'CERTIDAO_FGTS', label: 'Certidão FGTS' },
-    { value: 'CERTIDAO_INSS', label: 'Certidão INSS' },
-    { value: 'CERTIDAO_TRABALHISTA', label: 'Certidão Trabalhista' },
-    { value: 'CERTIDAO_MUNICIPAL', label: 'Certidão Municipal' },
-    { value: 'CRLV', label: 'CRLV' },
-    { value: 'IPVA', label: 'IPVA' },
-    { value: 'SEGURO', label: 'Seguro' },
-    { value: 'OUTROS', label: 'Outros' }
+    { value: 'cnpj', label: 'CNPJ' },
+    { value: 'inscricao_estadual', label: 'Inscrição Estadual' },
+    { value: 'certidao', label: 'Certidão' },
+    { value: 'procuracao', label: 'Procuração' },
+    { value: 'outro', label: 'Outros' }
   ];
 
   // Status de documento disponíveis
@@ -70,11 +60,13 @@ export class DocumentsComponent implements OnInit {
   }
 
   loadDocuments() {
+    console.log('Carregando documentos...');
     this.loading = true;
     this.error = null;
 
     this.apiService.getCompanies().pipe(
       switchMap(companies => {
+        console.log('Empresas encontradas:', companies.length);
         if (companies.length === 0) {
           throw new Error('Nenhuma empresa encontrada');
         }
@@ -83,13 +75,15 @@ export class DocumentsComponent implements OnInit {
         const company = companyData.company || companyData;
         const companyId = company.id;
         
+        console.log('Empresa selecionada:', company.name, 'ID:', companyId);
+        
         if (!companyId) {
           throw new Error('ID da empresa não encontrado');
         }
 
         const params: any = {
           page: this.currentPage,
-          pageSize: this.pageSize
+          limit: this.pageSize
         };
 
         if (this.selectedDocType) {
@@ -104,15 +98,18 @@ export class DocumentsComponent implements OnInit {
           params.search = this.searchTerm;
         }
 
+        console.log('Parâmetros da busca:', params);
         return this.documentsService.getDocuments(companyId, params);
       })
     ).subscribe({
       next: (response) => {
+        console.log('Documentos carregados:', response.documents.length);
         this.documents = response.documents;
         this.totalPages = response.pagination.totalPages;
         this.loading = false;
       },
       error: (error) => {
+        console.error('Erro ao carregar documentos:', error);
         this.error = error.message || 'Erro ao carregar documentos';
         this.loading = false;
       }
@@ -153,7 +150,7 @@ export class DocumentsComponent implements OnInit {
 
   resetUploadForm() {
     this.uploadForm = {
-      docType: 'CNPJ',
+      docType: 'cnpj',
       clientName: '',
       file: null as any
     };
@@ -200,8 +197,20 @@ export class DocumentsComponent implements OnInit {
   }
 
   downloadDocument(document: CompanyDocument) {
+    console.log('🚀 [DocumentsComponent.downloadDocument] ===== INICIANDO DOWNLOAD =====');
+    console.log('📄 Documento:', document.id, document.docType);
+    this.loading = true;
+    this.error = null;
+    
+    // Verificar se há token
+    const token = localStorage.getItem('access_token');
+    console.log('🔑 Token no localStorage:', token ? 'Presente' : 'Ausente');
+    
     this.apiService.getCompanies().pipe(
       switchMap(companies => {
+        console.log('🏢 [DocumentsComponent.downloadDocument] Empresas encontradas:', companies.length);
+        console.log('🏢 [DocumentsComponent.downloadDocument] Dados das empresas:', companies);
+        
         if (companies.length === 0) {
           throw new Error('Nenhuma empresa encontrada');
         }
@@ -210,23 +219,57 @@ export class DocumentsComponent implements OnInit {
         const company = companyData.company || companyData;
         const companyId = company.id;
         
+        console.log('🏢 [DocumentsComponent.downloadDocument] Empresa selecionada:', company.name, 'ID:', companyId);
+        console.log('🏢 [DocumentsComponent.downloadDocument] Estrutura da empresa:', company);
+        
         if (!companyId) {
           throw new Error('ID da empresa não encontrado');
         }
 
+        console.log('📥 [DocumentsComponent.downloadDocument] Fazendo download do documento:', document.id, 'da empresa:', companyId);
+        console.log('📥 [DocumentsComponent.downloadDocument] URL que será chamada:', `http://localhost:3000/v1/companies/${companyId}/documents/${document.id}/content`);
+        
         return this.documentsService.downloadDocument(companyId, document.id);
       })
     ).subscribe({
       next: (blob) => {
+        console.log('Download realizado com sucesso, tamanho:', blob.size, 'bytes');
+        
+        // Determinar extensão baseada no tipo MIME
+        let extension = '.pdf';
+        if (blob.type) {
+          if (blob.type.includes('image')) {
+            extension = '.jpg';
+          } else if (blob.type.includes('word')) {
+            extension = '.docx';
+          } else if (blob.type.includes('excel')) {
+            extension = '.xlsx';
+          } else if (blob.type.includes('text')) {
+            extension = '.txt';
+          }
+        }
+        
+        // Criar nome do arquivo limpo
+        const fileName = `${document.docType.replace(/[^a-zA-Z0-9]/g, '_')}_v${document.version}${extension}`;
+        
         const url = window.URL.createObjectURL(blob);
         const link = window.document.createElement('a');
         link.href = url;
-        link.download = `${document.docType}_v${document.version}.pdf`;
+        link.download = fileName;
+        link.style.display = 'none';
+        
+        window.document.body.appendChild(link);
         link.click();
+        window.document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
+        
+        this.loading = false;
+        console.log('Download concluído com sucesso!');
       },
       error: (error) => {
+        console.error('Erro no download:', error);
         this.error = error.message || 'Erro ao baixar documento';
+        this.loading = false;
       }
     });
   }
@@ -236,9 +279,20 @@ export class DocumentsComponent implements OnInit {
       return;
     }
 
+    console.log('🗑️ [DocumentsComponent.deleteDocument] ===== INICIANDO EXCLUSÃO =====');
+    console.log('📄 Documento:', document.id, document.docType);
     this.loading = true;
+    this.error = null;
+    
+    // Verificar se há token
+    const token = localStorage.getItem('access_token');
+    console.log('🔑 Token no localStorage:', token ? 'Presente' : 'Ausente');
+    
     this.apiService.getCompanies().pipe(
       switchMap(companies => {
+        console.log('🏢 [DocumentsComponent.deleteDocument] Empresas encontradas:', companies.length);
+        console.log('🏢 [DocumentsComponent.deleteDocument] Dados das empresas:', companies);
+        
         if (companies.length === 0) {
           throw new Error('Nenhuma empresa encontrada');
         }
@@ -247,18 +301,25 @@ export class DocumentsComponent implements OnInit {
         const company = companyData.company || companyData;
         const companyId = company.id;
         
+        console.log('🏢 [DocumentsComponent.deleteDocument] Empresa selecionada:', company.name, 'ID:', companyId);
+        console.log('🏢 [DocumentsComponent.deleteDocument] Estrutura da empresa:', company);
+        
         if (!companyId) {
           throw new Error('ID da empresa não encontrado');
         }
 
+        console.log('🗑️ [DocumentsComponent.deleteDocument] Chamando serviço para excluir documento:', document.id, 'da empresa:', companyId);
+        console.log('🗑️ [DocumentsComponent.deleteDocument] URL que será chamada:', `http://localhost:3000/v1/companies/${companyId}/documents/${document.id}`);
+        
         return this.documentsService.deleteDocument(companyId, document.id);
       })
     ).subscribe({
       next: () => {
+        console.log('Documento excluído com sucesso, recarregando lista...');
         this.loadDocuments(); // Recarregar lista
-        this.loading = false;
       },
       error: (error) => {
+        console.error('Erro ao excluir documento:', error);
         this.error = error.message || 'Erro ao excluir documento';
         this.loading = false;
       }

@@ -88,12 +88,12 @@ export class CompanyComponent implements OnInit, OnDestroy {
   showEditModal = false;
   selectedFile: File | null = null;
   selectedEditFile: File | null = null;
-  selectedDocType: string = '';
+  documentSearchTerm: string = '';
   editingDocument: CompanyDocument | null = null;
   
   // Upload form
   uploadForm: UploadDocumentRequest = {
-    docType: 'CNPJ',
+    docType: 'cnpj',
     clientName: '',
     file: null as any
   };
@@ -109,25 +109,18 @@ export class CompanyComponent implements OnInit, OnDestroy {
     notes?: string;
     file?: File | null;
   } = {
-    docType: 'CNPJ',
+    docType: 'cnpj',
     clientName: '',
     file: null
   };
 
-  // Document types
+  // Document types (valores em minúsculas para o backend)
   docTypes = [
-    { value: 'CNPJ', label: 'CNPJ' },
-    { value: 'INSCRICAO_ESTADUAL', label: 'Inscrição Estadual' },
-    { value: 'INSCRICAO_MUNICIPAL', label: 'Inscrição Municipal' },
-    { value: 'ALVARA', label: 'Alvará' },
-    { value: 'CONTRATO_SOCIAL', label: 'Contrato Social' },
-    { value: 'CERTIFICADO_DIGITAL', label: 'Certificado Digital' },
-    { value: 'LICENCA_AMBIENTAL', label: 'Licença Ambiental' },
-    { value: 'CERTIDAO_FGTS', label: 'Certidão FGTS' },
-    { value: 'CERTIDAO_INSS', label: 'Certidão INSS' },
-    { value: 'CERTIDAO_TRABALHISTA', label: 'Certidão Trabalhista' },
-    { value: 'CERTIDAO_MUNICIPAL', label: 'Certidão Municipal' },
-    { value: 'OUTROS', label: 'Outros' }
+    { value: 'cnpj', label: 'CNPJ' },
+    { value: 'inscricao_estadual', label: 'Inscrição Estadual' },
+    { value: 'certidao', label: 'Certidão' },
+    { value: 'procuracao', label: 'Procuração' },
+    { value: 'outro', label: 'Outros' }
   ];
 
   // UI State
@@ -837,7 +830,7 @@ export class CompanyComponent implements OnInit, OnDestroy {
 
   resetUploadForm() {
     this.uploadForm = {
-      docType: 'CNPJ',
+      docType: 'cnpj',
       clientName: '',
       file: null as any
     };
@@ -983,7 +976,7 @@ export class CompanyComponent implements OnInit, OnDestroy {
     this.editingDocument = null;
     this.selectedEditFile = null;
     this.editForm = {
-      docType: 'CNPJ',
+      docType: 'cnpj',
       clientName: '',
       file: null
     };
@@ -1136,15 +1129,40 @@ export class CompanyComponent implements OnInit, OnDestroy {
     });
   }
 
-  onDocTypeFilterChange() {
-    if (this.selectedDocType) {
-      this.filteredDocuments = this.documents.filter(doc => doc.docType === this.selectedDocType);
-    } else {
+  onDocumentSearchChange() {
+    if (!this.documentSearchTerm.trim()) {
       this.filteredDocuments = this.documents;
+      return;
     }
+
+    const searchTerm = this.documentSearchTerm.toLowerCase().trim();
+    this.filteredDocuments = this.documents.filter(doc => {
+      // Buscar no tipo de documento (formato: "Cliente - Tipo")
+      const docTypeMatch = doc.docType?.toLowerCase().includes(searchTerm);
+      
+      // Buscar no número do documento
+      const docNumberMatch = doc.docNumber?.toLowerCase().includes(searchTerm);
+      
+      // Buscar no emissor
+      const issuerMatch = doc.issuer?.toLowerCase().includes(searchTerm);
+      
+      // Buscar nas observações
+      const notesMatch = doc.notes?.toLowerCase().includes(searchTerm);
+      
+      // Buscar no nome do cliente (extrair da string docType)
+      const clientNameMatch = doc.docType?.toLowerCase().includes(searchTerm);
+      
+      return docTypeMatch || docNumberMatch || issuerMatch || notesMatch || clientNameMatch;
+    });
   }
 
   getDocumentTypeLabel(docType: string): string {
+    // Se o docType já está no formato "Cliente - Tipo", retornar como está
+    if (docType.includes(' - ')) {
+      return docType;
+    }
+    
+    // Caso contrário, buscar no array de tipos (fallback)
     const type = this.docTypes.find(t => t.value === docType);
     return type ? type.label : docType;
   }

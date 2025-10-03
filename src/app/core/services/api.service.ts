@@ -289,13 +289,13 @@ export class ApiService {
   }
 
   // Métodos de documentos
-  getDocuments(companyId: string, params?: { docType?: string; page?: number; pageSize?: number }): Observable<any> {
+  getDocuments(companyId: string, params?: { docType?: string; page?: number; limit?: number }): Observable<any> {
     let url = `${this.apiBaseUrl}/companies/${companyId}/documents`;
     if (params) {
       const queryParams = new URLSearchParams();
       if (params.docType) queryParams.append('docType', params.docType);
       if (params.page) queryParams.append('page', params.page.toString());
-      if (params.pageSize) queryParams.append('pageSize', params.pageSize.toString());
+      if (params.limit) queryParams.append('limit', params.limit.toString());
       if (queryParams.toString()) {
         url += `?${queryParams.toString()}`;
       }
