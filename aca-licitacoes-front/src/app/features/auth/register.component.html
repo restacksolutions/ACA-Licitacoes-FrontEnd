@@ -1,0 +1,120 @@
+<app-auth-header />
+
+<div class="min-h-[calc(100vh-57px)] bg-neutral-50 text-neutral-900 flex items-center justify-center p-6">
+  <div class="w-full max-w-lg">
+    <!-- Marca -->
+    <div class="flex items-center gap-3 mb-6">
+      <div class="h-9 w-9 rounded-md grid place-items-center bg-[#0f3d2e]">
+        <span class="text-white font-semibold text-sm">LB</span>
+      </div>
+      <div>
+        <h1 class="text-2xl font-semibold tracking-tight text-[#0f3d2e]">LicitaBoard</h1>
+        <p class="text-sm text-neutral-500">Criar uma nova conta</p>
+      </div>
+    </div>
+
+    <form
+      class="bg-white border border-neutral-200 rounded-xl p-5 flex flex-col gap-4 shadow-sm"
+      [formGroup]="form"
+      (ngSubmit)="submit()"
+    >
+      <!-- Nome completo -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-sm text-neutral-600">Nome completo</label>
+        <input
+          class="h-10 px-3 rounded-md border border-neutral-300 bg-white text-sm placeholder:text-neutral-400 outline-none
+                 focus:border-[#0f3d2e] focus:ring-2 focus:ring-[#0f3d2e]/15"
+          formControlName="fullName" type="text" placeholder="Seu nome"
+        />
+        <small class="text-red-600 text-xs" *ngIf="form.controls.fullName.touched && form.controls.fullName.invalid">
+          Informe seu nome (mín. 2 caracteres).
+        </small>
+      </div>
+
+      <!-- Email -->
+      <div class="flex flex-col gap-1.5">
+        <label class="text-sm text-neutral-600">E-mail</label>
+        <input
+          class="h-10 px-3 rounded-md border border-neutral-300 bg-white text-sm placeholder:text-neutral-400 outline-none
+                 focus:border-[#0f3d2e] focus:ring-2 focus:ring-[#0f3d2e]/15"
+          formControlName="email" type="email" placeholder="john@acme.com"
+        />
+        <small class="text-red-600 text-xs" *ngIf="form.controls.email.touched && form.controls.email.invalid">
+          Informe um e-mail válido.
+        </small>
+      </div>
+
+      <!-- Senha + Confirmar -->
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm text-neutral-600">Senha</label>
+          <input
+            class="h-10 px-3 rounded-md border border-neutral-300 bg-white text-sm placeholder:text-neutral-400 outline-none
+                   focus:border-[#0f3d2e] focus:ring-2 focus:ring-[#0f3d2e]/15"
+            formControlName="password" type="password" placeholder="Ex.: Secret123!"
+          />
+          <small class="text-neutral-600 text-xs">
+            Mín. 8, com maiúscula, minúscula, número e símbolo.
+          </small>
+          <small class="text-red-600 text-xs" *ngIf="form.controls.password.touched && form.controls.password.hasError('weak')">
+            A senha não atende aos requisitos.
+          </small>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm text-neutral-600">Confirmar senha</label>
+          <input
+            class="h-10 px-3 rounded-md border border-neutral-300 bg-white text-sm placeholder:text-neutral-400 outline-none
+                   focus:border-[#0f3d2e] focus:ring-2 focus:ring-[#0f3d2e]/15"
+            formControlName="confirm" type="password" placeholder="Repita a senha"
+          />
+          <small class="text-red-600 text-xs" *ngIf="form.controls.confirm.touched && form.controls.confirm.hasError('mismatch')">
+            As senhas não coincidem.
+          </small>
+        </div>
+      </div>
+
+      <!-- Empresa -->
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="flex flex-col gap-1.5 md:col-span-2">
+          <label class="text-sm text-neutral-600">Nome da empresa</label>
+          <input
+            class="h-10 px-3 rounded-md border border-neutral-300 bg-white text-sm placeholder:text-neutral-400 outline-none
+                   focus:border-[#0f3d2e] focus:ring-2 focus:ring-[#0f3d2e]/15"
+            formControlName="companyName" type="text" placeholder="Minha Empresa"
+          />
+          <small class="text-red-600 text-xs" *ngIf="form.controls.companyName.touched && form.controls.companyName.invalid">
+            Informe o nome da empresa (mín. 2 caracteres).
+          </small>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm text-neutral-600">CNPJ</label>
+          <input
+            class="h-10 px-3 rounded-md border border-neutral-300 bg-white text-sm placeholder:text-neutral-400 outline-none
+                   focus:border-[#0f3d2e] focus:ring-2 focus:ring-[#0f3d2e]/15"
+            formControlName="cnpj" type="text" placeholder="00.000.000/0000-00"
+            (input)="onCnpjInput($event)"
+          />
+          <small class="text-red-600 text-xs" *ngIf="form.controls.cnpj.touched && form.controls.cnpj.hasError('cnpjInvalid')">
+            CNPJ deve ter 14 dígitos.
+          </small>
+        </div>
+      </div>
+
+      <!-- Ações -->
+      <button
+        class="h-10 rounded-md font-semibold text-white bg-[#0f3d2e]
+               hover:bg-[#0c3427] active:bg-[#0a2c21]
+               disabled:opacity-50 disabled:cursor-not-allowed"
+        type="submit"
+        [disabled]="loading() || form.invalid"
+      >
+        Cadastrar
+      </button>
+
+      <p class="text-red-600 text-sm" *ngIf="error()">{{ error() }}</p>
+      <p class="text-emerald-700 text-sm" *ngIf="success()">{{ success() }}</p>
+    </form>
+  </div>
+</div>

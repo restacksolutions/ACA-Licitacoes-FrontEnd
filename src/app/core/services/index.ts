@@ -1,7 +1,0 @@
-export * from '../../pages/auth-pages/auth.service';
-export * from '../../pages/tenders/tender.service';
-export * from '../../pages/vehicles/vehicle.service';
-export * from './document.service';
-export * from '../../pages/dashboard/dashboard.service';
-export * from '../../pages/reports/reports.service';
-export * from '../../pages/tenders/tender-api.service';

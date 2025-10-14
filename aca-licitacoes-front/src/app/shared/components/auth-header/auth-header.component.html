@@ -1,0 +1,31 @@
+<header class="w-full border-b bg-white/80 backdrop-blur">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+      <!-- Marca / Nome do sistema -->
+      <div class="flex items-center gap-2">
+        <div class="h-8 w-8 rounded-md grid place-items-center bg-[#0f3d2e]">
+          <span class="text-white font-semibold text-xs">LB</span>
+        </div>
+        <span class="text-lg font-semibold tracking-tight text-[#0f3d2e]">LicitaBoard</span>
+      </div>
+  
+      <!-- Ação (troca login <-> registro) -->
+      <div class="ml-auto">
+        <a
+          *ngIf="isLogin(); else goLogin"
+          routerLink="/register"
+          class="inline-flex items-center h-9 px-3 rounded-md border border-black/10 hover:bg-gray-50"
+        >
+          Criar conta
+        </a>
+        <ng-template #goLogin>
+          <a
+            routerLink="/login"
+            class="inline-flex items-center h-9 px-3 rounded-md border border-black/10 hover:bg-gray-50"
+          >
+            Entrar
+          </a>
+        </ng-template>
+      </div>
+    </div>
+  </header>
+  
