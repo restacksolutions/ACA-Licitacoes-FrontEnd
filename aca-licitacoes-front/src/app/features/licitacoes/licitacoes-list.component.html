@@ -1,0 +1,160 @@
+<section class="space-y-4">
+    <!-- Cabeçalho + filtros -->
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <h1 class="text-xl font-semibold tracking-tight">Licitações</h1>
+      <div class="flex items-center gap-2">
+        <!-- view toggle -->
+        <div class="inline-flex rounded-md border border-black/10 overflow-hidden">
+          <button
+            class="h-9 px-3 text-sm"
+            [class.bg-white]="view() === 'table'"
+            [class.bg-neutral-100]="view() !== 'table'"
+            (click)="setView('table')"
+          >
+            Tabela
+          </button>
+          <button
+            class="h-9 px-3 text-sm border-l border-black/10"
+            [class.bg-white]="view() === 'calendar'"
+            [class.bg-neutral-100]="view() !== 'calendar'"
+            (click)="setView('calendar')"
+          >
+            Calendário
+          </button>
+        </div>
+  
+        <!-- filtros -->
+        <input
+          class="h-9 px-3 rounded-md border border-black/10 outline-none focus:ring focus:ring-[#0f3d2e]/15"
+          placeholder="Buscar..."
+          (input)="onSearch($event)"
+        />
+        <select
+          class="h-9 px-3 rounded-md border border-black/10 outline-none focus:ring focus:ring-[#0f3d2e]/15"
+          (change)="onStatus($event)"
+        >
+          <option value="all">Todos</option>
+          <option value="draft">Rascunho</option>
+          <option value="open">Aberta</option>
+          <option value="closed">Encerrada</option>
+          <option value="cancelled">Cancelada</option>
+          <option value="awarded">Adjudicada</option>
+        </select>
+  
+        <button class="h-9 px-3 rounded-md border border-black/10 hover:bg-gray-50" (click)="refresh()">
+          Atualizar
+        </button>
+  
+        <a
+          class="h-9 px-3 rounded-md text-white bg-[#0f3d2e] hover:bg-[#0c3427] grid place-items-center"
+          routerLink="/licitacoes/new"
+        >
+          Nova
+        </a>
+      </div>
+    </div>
+  
+    <!-- Estados -->
+    <div *ngIf="loading()" class="grid gap-2">
+      <div class="h-12 rounded-md bg-neutral-100 animate-pulse"></div>
+      <div class="h-12 rounded-md bg-neutral-100 animate-pulse"></div>
+      <div class="h-12 rounded-md bg-neutral-100 animate-pulse"></div>
+    </div>
+  
+    <div *ngIf="error()" class="text-red-600 text-sm">
+      {{ error() }}
+    </div>
+  
+    <!-- Modo Tabela -->
+    <div *ngIf="!loading() && !error() && view() === 'table'">
+      <div *ngIf="items().length === 0"
+           class="border border-dashed border-black/10 rounded-xl p-8 text-center text-neutral-500">
+        Nenhuma licitação encontrada.
+      </div>
+  
+      <div *ngIf="items().length > 0" class="overflow-x-auto rounded-lg border border-black/10 bg-white">
+        <table class="w-full text-sm">
+          <thead class="bg-neutral-50">
+            <tr class="text-left text-neutral-600">
+              <th class="py-2 px-3">Título</th>
+              <th class="py-2 px-3">Status</th>
+              <th class="py-2 px-3">Sessão</th>
+              <th class="py-2 px-3">Envio</th>
+              <th class="py-2 px-3">Atualizado</th>
+              <th class="py-2 px-3 text-right">Ações</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-black/10">
+            <tr *ngFor="let lic of items()" class="hover:bg-neutral-50">
+              <td class="py-2 px-3 font-medium max-w-[360px] truncate">{{ lic.title }}</td>
+              <td class="py-2 px-3">
+                <span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs"
+                      [ngClass]="badgeClass(lic.status)">
+                  {{ lic.status }}
+                </span>
+              </td>
+              <td class="py-2 px-3 text-neutral-600">{{ lic.sessionDate | date:'short' }}</td>
+              <td class="py-2 px-3 text-neutral-600">{{ lic.submissionDeadline | date:'short' }}</td>
+              <td class="py-2 px-3 text-neutral-600">{{ lic.updatedAt | date:'short' }}</td>
+              <td class="py-2 px-3 text-right">
+                <a class="h-8 px-3 rounded-md border border-black/10 hover:bg-gray-50 inline-grid place-items-center"
+                   [routerLink]="['/licitacoes', lic.id]">
+                  Ver
+                </a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  
+    <!-- Modo Calendário -->
+    <div *ngIf="!loading() && !error() && view() === 'calendar'">
+      <!-- controle mês -->
+      <div class="flex items-center justify-between mb-2">
+        <div class="font-semibold tracking-tight capitalize">
+          {{ monthLabel() }}
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="h-9 px-3 rounded-md border border-black/10 hover:bg-gray-50" (click)="prevMonth()">Mês anterior</button>
+          <button class="h-9 px-3 rounded-md border border-black/10 hover:bg-gray-50" (click)="nextMonth()">Próximo mês</button>
+        </div>
+      </div>
+  
+      <!-- cabeçalho dos dias -->
+      <div class="grid grid-cols-7 text-center text-xs text-neutral-600 mb-1">
+        <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+      </div>
+  
+      <!-- grade do calendário -->
+      <div class="grid grid-rows-6 border border-black/10 rounded-lg overflow-hidden bg-white">
+        <div *ngFor="let week of calendarMatrix(); let wi = index" class="grid grid-cols-7 border-b border-black/10 last:border-b-0">
+          <div *ngFor="let day of week"
+               class="min-h-[120px] border-r border-black/10 last:border-r-0 p-2 align-top"
+               [class.bg-neutral-50]="!day.inMonth">
+            <div class="text-xs text-neutral-500 mb-1 flex items-center justify-between">
+              <span [class.text-neutral-900]="day.inMonth">{{ day.date.getDate() }}</span>
+              <span *ngIf="day.items.length" class="text-[11px] text-neutral-400">{{ day.items.length }} item(s)</span>
+            </div>
+  
+            <div class="space-y-1">
+              <a *ngFor="let it of day.items | slice:0:3"
+                 class="block text-xs rounded-md border border-black/10 px-2 py-1 hover:bg-neutral-50 truncate"
+                 [routerLink]="['/licitacoes', it.id]"
+                 [ngClass]="badgeClass(it.status)">
+                <span class="font-medium text-neutral-800">{{ it.title }}</span>
+              </a>
+              <div *ngIf="day.items.length > 3" class="text-[11px] text-neutral-500">+{{ day.items.length - 3 }} mais…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+  
+      <!-- vazio -->
+      <div *ngIf="items().length === 0"
+           class="border border-dashed border-black/10 rounded-xl p-8 text-center text-neutral-500 mt-3">
+        Nenhuma licitação com data para este período.
+      </div>
+    </div>
+  </section>
+  

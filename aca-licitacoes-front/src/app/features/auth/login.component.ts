@@ -4,6 +4,7 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from './auth.service';
 import { AuthHeaderComponent } from '../../shared/components/auth-header/auth-header.component';
+import Swal from 'sweetalert2';
 
 
 @Component({
@@ -34,12 +35,30 @@ export class LoginComponent {
 
     this.loading.set(true);
     this.auth.login(this.form.value as any).subscribe({
-      next: () => { this.loading.set(false); this.router.navigateByUrl('/'); },
+      next: (response) => { 
+        this.loading.set(false);
+        Swal.fire({
+          title: 'Sucesso!',
+          text: 'Login realizado com sucesso!',
+          icon: 'success',
+          confirmButtonText: 'OK',
+          timer: 2000,
+          timerProgressBar: true
+        }).then(() => {
+          this.router.navigateByUrl('/');
+        });
+      },
       error: (e) => {
         this.loading.set(false);
-        this.error.set(
-          e?.error?.message || (e?.status === 401 ? 'Credenciais inválidas.' : 'Falha no login.')
-        );
+        const errorMessage = e?.error?.message || (e?.status === 401 ? 'Credenciais inválidas.' : 'Falha no login.');
+        this.error.set(errorMessage);
+        
+        Swal.fire({
+          title: 'Erro!',
+          text: errorMessage,
+          icon: 'error',
+          confirmButtonText: 'OK'
+        });
       }
     });
   }

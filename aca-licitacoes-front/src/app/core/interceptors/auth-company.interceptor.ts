@@ -4,9 +4,11 @@ import { TokenService } from '../services/token.service';
 import { CompanyService } from '../services/company.service';
 
 export const authCompanyInterceptor: HttpInterceptorFn = (req, next) => {
+  // rotas públicas não recebem headers
   if (req.url.includes('/auth/login') || req.url.includes('/auth/register')) {
-    return next(req); // não anexa nada no login/register
+    return next(req);
   }
+
   const token = inject(TokenService).get();
   const companyId = inject(CompanyService).get();
 

@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
+const KEY = 'companyId';
 
 @Injectable({ providedIn: 'root' })
 export class CompanyService {
-  private k = 'companyId';
-  get() { return localStorage.getItem(this.k) || ''; }
-  set(v: string) { localStorage.setItem(this.k, v); }
+  get() { return localStorage.getItem(KEY) || ''; }
+  set(v: string) { v?.trim() && localStorage.setItem(KEY, v.trim()); }
+  clear() { localStorage.removeItem(KEY); }
 }
