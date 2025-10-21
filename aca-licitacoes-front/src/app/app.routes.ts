@@ -19,6 +19,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/licitacoes/licitacoes-list.component')
           .then(m => m.LicitacoesListComponent),
       },
+      {
+        path: 'empresa',
+        loadComponent: () => import('./features/company/company.page')
+          .then(m => m.CompanyPage),
+      },
     ]
   },
 

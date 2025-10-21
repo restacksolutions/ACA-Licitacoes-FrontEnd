@@ -1,4 +1,4 @@
 export const environment = {
   production: false,
-  apiBaseUrl: 'http://localhost:3000', // ajuste conforme seu back
+  apiBaseUrl: 'https://aca-licitacoes-backend-production.up.railway.app', // ajuste conforme seu back
 };

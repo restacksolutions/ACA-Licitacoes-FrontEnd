@@ -1,0 +1,180 @@
+<header class="border-b bg-white">
+    <div class="max-w-6xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
+      <h1 class="text-xl font-semibold tracking-tight">Empresa</h1>
+      <div class="text-sm text-neutral-600">Gerencie dados, funcionários e documentos</div>
+    </div>
+    <nav class="border-t bg-white">
+      <ul class="max-w-6xl mx-auto px-4 md:px-6 flex gap-4">
+        <li>
+          <button (click)="tab.set('info')"
+            class="inline-block py-3 border-b-2"
+            [class.border-black/80]="tab() === 'info'" [class.border-transparent]="tab() !== 'info'">
+            Informações
+          </button>
+        </li>
+        <li>
+          <button (click)="tab.set('func')"
+            class="inline-block py-3 border-b-2"
+            [class.border-black/80]="tab() === 'func'" [class.border-transparent]="tab() !== 'func'" disabled class="text-gray-400">
+            Funcionários
+          </button>
+        </li>
+        <li>
+          <button (click)="tab.set('docs')"
+            class="inline-block py-3 border-b-2"
+            [class.border-black/80]="tab() === 'docs'" [class.border-transparent]="tab() !== 'docs'">
+            Documentos
+          </button>
+        </li>
+      </ul>
+    </nav>
+  </header>
+  
+  <section class="max-w-6xl mx-auto px-4 md:px-6 py-6 space-y-8">
+  
+    <!-- INFO -->
+    <div *ngIf="tab() === 'info'" class="bg-white border border-black/10 rounded-xl p-5 shadow-sm max-w-3xl">
+      <h2 class="text-xl font-semibold tracking-tight mb-4">Informações da Empresa</h2>
+      <form [formGroup]="infoForm" (ngSubmit)="saveInfo()" class="grid gap-4">
+        <div>
+          <label class="text-sm text-neutral-600">Nome</label>
+          <input class="h-10 px-3 rounded-md border border-neutral-300 w-full" formControlName="name" />
+        </div>
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <label class="text-sm text-neutral-600">CNPJ</label>
+            <input 
+              class="h-10 px-3 rounded-md border border-neutral-300 w-full" 
+              formControlName="cnpj" 
+              (input)="formatCNPJ($event)"
+              placeholder="00.000.000/0000-00"
+              maxlength="18"
+            />
+          </div>
+          
+        </div>
+       
+        <div class="flex items-center gap-2">
+          <button class="h-10 px-4 rounded-md font-semibold text-white bg-[#0f3d2e] hover:bg-[#0c3427]">Salvar</button>
+          <span class="text-neutral-500 text-sm" *ngIf="savedInfo()">Salvo ✔</span>
+        </div>
+      </form>
+    </div>
+  
+    <!-- FUNCIONÁRIOS -->
+    <div *ngIf="tab() === 'func'" class="bg-white border border-black/10 rounded-xl p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold tracking-tight">Funcionários</h2>
+        <form [formGroup]="empForm" (ngSubmit)="saveEmp()" class="flex gap-2">
+          <input class="h-10 px-3 rounded-md border" placeholder="Nome" formControlName="fullName" />
+          <input class="h-10 px-3 rounded-md border" placeholder="E-mail" formControlName="email" />
+          <input class="h-10 px-3 rounded-md border" placeholder="Função" formControlName="role" />
+          <button class="h-10 px-4 rounded-md text-white bg-[#0f3d2e] hover:bg-[#0c3427]">
+            {{ editingEmpId ? 'Atualizar' : 'Adicionar' }}
+          </button>
+        </form>
+      </div>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-neutral-600">
+            <th class="py-2">Nome</th><th class="py-2">E-mail</th><th class="py-2">Função</th><th class="py-2 text-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-black/10">
+          <tr *ngFor="let e of employees()">
+            <td class="py-2">{{ e.fullName }}</td>
+            <td class="py-2">{{ e.email }}</td>
+            <td class="py-2">{{ e.role || '-' }}</td>
+            <td class="py-2 text-right space-x-2">
+              <button class="h-9 px-3 rounded-md border hover:bg-gray-50" (click)="editEmp(e)">Editar</button>
+              <button class="h-9 px-3 rounded-md border hover:bg-red-50" (click)="removeEmp(e)">Excluir</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div *ngIf="!employees().length"
+           class="border border-dashed border-black/10 rounded-xl p-8 text-center text-neutral-500 mt-4">
+        Nenhum funcionário cadastrado.
+      </div>
+    </div>
+  
+    <!-- DOCUMENTOS -->
+    <div *ngIf="tab() === 'docs'" class="grid gap-6">
+      <!-- Válidos -->
+      <section>
+        <div class="flex items-center gap-2 mb-2">
+          <span class="h-2 w-2 rounded-full bg-emerald-600"></span>
+          <h3 class="text-lg font-semibold">Documentos Válidos ({{ validos().length }})</h3>
+        </div>
+        <ul class="grid md:grid-cols-2 lg:grid-cols-3 gap-3" *ngIf="validos().length; else nv">
+          <li *ngFor="let d of validos()" class="bg-emerald-50 border border-black/10 rounded-xl p-4 shadow-sm">
+            <div class="flex items-start justify-between">
+              <div class="font-medium">{{ d.name }}</div>
+              <span class="text-xs rounded-md px-2 py-0.5 bg-emerald-100 text-emerald-700">Válido</span>
+            </div>
+            <div class="text-xs text-neutral-600 mt-2">{{ d.issuer || d.docType }}</div>
+            <div class="text-sm text-neutral-700 mt-1" *ngIf="d.expiresAt">Expira em: {{ d.expiresAt | date:'dd/MM/yyyy' }}</div>
+            <div class="mt-3 flex gap-2">
+              <button class="h-9 px-3 rounded-md border hover:bg-gray-50" (click)="download(d)">Baixar</button>
+              <label class="h-9 px-3 rounded-md border hover:bg-gray-50 cursor-pointer">
+                <input type="file" class="hidden" (change)="onFile(d,$event)" /> Atualizar
+              </label>
+            </div>
+          </li>
+        </ul>
+        <ng-template #nv><div class="border border-dashed border-black/10 rounded-xl p-6 text-center text-neutral-500">Nenhum documento válido.</div></ng-template>
+      </section>
+  
+      <!-- Aviso -->
+      <section>
+        <div class="flex items-center gap-2 mb-2">
+          <span class="h-2 w-2 rounded-full bg-amber-500"></span>
+          <h3 class="text-lg font-semibold">Documentos com Aviso ({{ aviso().length }})</h3>
+        </div>
+        <ul class="grid md:grid-cols-2 lg:grid-cols-3 gap-3" *ngIf="aviso().length; else na">
+          <li *ngFor="let d of aviso()" class="bg-amber-50 border border-black/10 rounded-xl p-4 shadow-sm">
+            <div class="flex items-start justify-between">
+              <div class="font-medium">{{ d.name }}</div>
+              <span class="text-xs rounded-md px-2 py-0.5 bg-amber-100 text-amber-700">Atenção</span>
+            </div>
+            <div class="text-xs text-neutral-600 mt-2">{{ d.issuer || d.docType }}</div>
+            <div class="text-sm text-neutral-700 mt-1">Expira em: {{ d.expiresAt | date:'dd/MM/yyyy' }}</div>
+            <div class="mt-3 flex gap-2">
+              <button class="h-9 px-3 rounded-md border hover:bg-gray-50" (click)="download(d)">Baixar</button>
+              <label class="h-9 px-3 rounded-md border hover:bg-gray-50 cursor-pointer">
+                <input type="file" class="hidden" (change)="onFile(d,$event)" /> Atualizar
+              </label>
+            </div>
+          </li>
+        </ul>
+        <ng-template #na><div class="border border-dashed border-black/10 rounded-xl p-6 text-center text-neutral-500">Sem avisos por enquanto.</div></ng-template>
+      </section>
+  
+      <!-- Expirados -->
+      <section>
+        <div class="flex items-center gap-2 mb-2">
+          <span class="h-2 w-2 rounded-full bg-red-600"></span>
+          <h3 class="text-lg font-semibold">Documentos Expirados ({{ expirados().length }})</h3>
+        </div>
+        <ul class="grid md:grid-cols-2 lg:grid-cols-3 gap-3" *ngIf="expirados().length; else ne">
+          <li *ngFor="let d of expirados()" class="bg-rose-50 border border-black/10 rounded-xl p-4 shadow-sm">
+            <div class="flex items-start justify-between">
+              <div class="font-medium">{{ d.name }}</div>
+              <span class="text-xs rounded-md px-2 py-0.5 bg-rose-100 text-rose-700">Expirado</span>
+            </div>
+            <div class="text-xs text-neutral-600 mt-2">{{ d.issuer || d.docType }}</div>
+            <div class="text-sm text-neutral-700 mt-1" *ngIf="d.expiresAt">Expirou em: {{ d.expiresAt | date:'dd/MM/yyyy' }}</div>
+            <div class="mt-3 flex gap-2">
+              <button class="h-9 px-3 rounded-md border hover:bg-gray-50" (click)="download(d)">Baixar</button>
+              <label class="h-9 px-3 rounded-md border hover:bg-gray-50 cursor-pointer">
+                <input type="file" class="hidden" (change)="onFile(d,$event)" /> Atualizar
+              </label>
+            </div>
+          </li>
+        </ul>
+        <ng-template #ne><div class="border border-dashed border-black/10 rounded-xl p-6 text-center text-neutral-500">Nenhum expirado.</div></ng-template>
+      </section>
+    </div>
+  
+  </section>
+  
