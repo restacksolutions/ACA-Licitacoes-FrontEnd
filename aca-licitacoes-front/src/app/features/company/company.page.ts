@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { CompanyFeatureService, Company, Employee, CompanyDoc } from './company.service';
+import Swal from 'sweetalert2';
 
 const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
 const parse = (s?: string | null) => (s ? new Date(s) : null);
@@ -55,9 +56,26 @@ export class CompanyPage {
     return exp >= t && exp < addDays(t, 30);
   }));
   expirados = computed(() => this.docs().filter(d => {
-    const exp = parse(d.expiresAt); if (!exp) return !!d.required;
+    const exp = parse(d.expiresAt); if (!exp) return false;
     return exp < new Date();
   }));
+
+  // Formulário para adicionar novo documento
+  docForm = this.fb.group({
+    clientName: ['', [Validators.required, Validators.minLength(2)]],
+    docType: ['', [Validators.required]],
+    issueDate: [''],
+    expiresAt: [''],
+    notes: ['']
+  });
+
+  // Estado do modal de documentos
+  showDocModal = signal(false);
+  editingDocId: string | null = null;
+  
+  // Estado do upload
+  uploadingFile = signal(false);
+  uploadProgress = signal(0);
 
   constructor() {
     // carregar dados iniciais
@@ -156,16 +174,248 @@ export class CompanyPage {
   removeEmp(e: Employee) { this.api.deleteEmployee(this.companyId, e.id).subscribe(() => this.reloadEmployees()); }
 
   // DOCUMENTOS
-  reloadDocs() { this.api.listDocs(this.companyId).subscribe(d => this.docs.set(d)); }
-  onFile(d: CompanyDoc, ev: Event) {
-    const file = (ev.target as HTMLInputElement).files?.[0]; if (!file) return;
-    this.api.uploadDocFile(this.companyId, d.id, file).subscribe(() => this.reloadDocs());
-    (ev.target as HTMLInputElement).value = '';
+  reloadDocs() { 
+    this.api.listDocs(this.companyId).subscribe(d => this.docs.set(d)); 
   }
+  
+  // Abre o modal para adicionar/editar documento
+  openDocModal(doc?: CompanyDoc) {
+    if (doc) {
+      // Modo edição - preenche o formulário com dados do documento
+      this.editingDocId = doc.id;
+      this.docForm.patchValue({
+        clientName: doc.clientName,
+        docType: doc.docType,
+        issueDate: doc.issueDate ? new Date(doc.issueDate).toISOString().split('T')[0] : '',
+        expiresAt: doc.expiresAt ? new Date(doc.expiresAt).toISOString().split('T')[0] : '',
+        notes: doc.notes || ''
+      });
+    } else {
+      // Modo criação - limpa o formulário
+      this.editingDocId = null;
+      this.docForm.reset();
+    }
+    this.showDocModal.set(true);
+  }
+  
+  // Fecha o modal de documentos
+  closeDocModal() {
+    this.showDocModal.set(false);
+    this.editingDocId = null;
+    this.docForm.reset();
+  }
+  
+  // Previne o fechamento do modal quando clica no backdrop
+  onModalBackdropClick(event: Event) {
+    if (event.target === event.currentTarget) {
+      this.closeDocModal();
+    }
+  }
+  
+  // Salva o documento (criação ou edição)
+  saveDoc() {
+    if (this.docForm.invalid) {
+      // Mostra alerta de erro se o formulário for inválido
+      Swal.fire({
+        icon: 'error',
+        title: 'Erro!',
+        text: 'Por favor, preencha todos os campos obrigatórios.',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    const formValue = this.docForm.value;
+    const docData: Partial<CompanyDoc> = {
+      clientName: formValue.clientName!,
+      docType: formValue.docType!,
+      issueDate: formValue.issueDate || undefined,
+      expiresAt: formValue.expiresAt || undefined,
+      notes: formValue.notes || undefined,
+      companyId: this.companyId
+    };
+
+    const request = this.editingDocId 
+      ? this.api.updateDoc(this.companyId, this.editingDocId, docData)
+      : this.api.createDoc(this.companyId, docData);
+
+    request.subscribe({
+      next: (response) => {
+        if (this.editingDocId) {
+          // Modo edição - fecha modal
+          Swal.fire({
+            icon: 'success',
+            title: 'Sucesso!',
+            text: 'Documento atualizado com sucesso!',
+            confirmButtonText: 'OK'
+          });
+          this.closeDocModal();
+        } else {
+          // Modo criação - mantém modal aberto para upload
+          this.editingDocId = response.id;
+          Swal.fire({
+            icon: 'success',
+            title: 'Documento criado!',
+            text: 'Agora você pode fazer upload do arquivo.',
+            confirmButtonText: 'OK'
+          });
+        }
+        this.reloadDocs();
+      },
+      error: (error) => {
+        // Erro - mostra alerta de erro
+        console.error('Erro ao salvar documento:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Erro!',
+          text: 'Ocorreu um erro ao salvar o documento. Tente novamente.',
+          confirmButtonText: 'OK'
+        });
+      }
+    });
+  }
+  
+  // Remove um documento com confirmação
+  deleteDoc(doc: CompanyDoc) {
+    Swal.fire({
+      title: 'Tem certeza?',
+      text: `Deseja realmente excluir o documento "${doc.clientName}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sim, excluir!',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.api.deleteDoc(this.companyId, doc.id).subscribe({
+          next: () => {
+            Swal.fire({
+              icon: 'success',
+              title: 'Excluído!',
+              text: 'Documento excluído com sucesso.',
+              confirmButtonText: 'OK'
+            });
+            this.reloadDocs();
+          },
+          error: (error) => {
+            console.error('Erro ao excluir documento:', error);
+            Swal.fire({
+              icon: 'error',
+              title: 'Erro!',
+              text: 'Ocorreu um erro ao excluir o documento. Tente novamente.',
+              confirmButtonText: 'OK'
+            });
+          }
+        });
+      }
+    });
+  }
+  
+  // Upload de arquivo para documento (método do modal)
+  onFileUpload(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file || !this.editingDocId) return;
+    
+    this.uploadFileToDocument(this.editingDocId, file);
+  }
+  
+  // Upload de arquivo para documento (método da lista)
+  onFile(d: CompanyDoc, ev: Event) {
+    const file = (ev.target as HTMLInputElement).files?.[0]; 
+    if (!file) return;
+    
+    this.uploadFileToDocument(d.id, file);
+  }
+  
+  // Método centralizado para upload de arquivo
+  uploadFileToDocument(docId: string, file: File) {
+    // Validação do arquivo
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    
+    if (file.size > maxSize) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Arquivo muito grande!',
+        text: 'O arquivo deve ter no máximo 10MB.',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+    
+    if (!allowedTypes.includes(file.type)) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Tipo de arquivo inválido!',
+        text: 'Apenas arquivos PDF, DOC e DOCX são permitidos.',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+    
+    // Inicia o upload
+    this.uploadingFile.set(true);
+    this.uploadProgress.set(0);
+    
+    this.api.uploadDocFile(this.companyId, docId, file).subscribe({
+      next: (response) => {
+        this.uploadingFile.set(false);
+        this.uploadProgress.set(0);
+        
+        Swal.fire({
+          icon: 'success',
+          title: 'Upload concluído!',
+          text: 'Arquivo enviado com sucesso.',
+          confirmButtonText: 'OK'
+        });
+        
+        this.reloadDocs();
+        
+        // Se estiver no modal, fecha após upload
+        if (this.editingDocId === docId) {
+          this.closeDocModal();
+        }
+      },
+      error: (error) => {
+        this.uploadingFile.set(false);
+        this.uploadProgress.set(0);
+        
+        console.error('Erro no upload:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Erro no upload!',
+          text: 'Ocorreu um erro ao enviar o arquivo. Tente novamente.',
+          confirmButtonText: 'OK'
+        });
+      }
+    });
+  }
+  
+  // Download de arquivo
   download(d: CompanyDoc) {
-    this.api.downloadDocFile(this.companyId, d.id).subscribe(blob => {
-      const url = URL.createObjectURL(blob); const a = document.createElement('a');
-      a.href = url; a.download = d.fileName || `${d.name}.pdf`; a.click(); URL.revokeObjectURL(url);
+    this.api.downloadDocFile(this.companyId, d.id).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = d.fileName || `${d.clientName}_${d.docType}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: (error) => {
+        console.error('Erro no download:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Erro no download!',
+          text: 'Ocorreu um erro ao baixar o arquivo. Tente novamente.',
+          confirmButtonText: 'OK'
+        });
+      }
     });
   }
 }

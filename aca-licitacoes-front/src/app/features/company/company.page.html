@@ -12,13 +12,12 @@
             Informações
           </button>
         </li>
-        <li>
-          <button (click)="tab.set('func')"
-            class="inline-block py-3 border-b-2"
-            [class.border-black/80]="tab() === 'func'" [class.border-transparent]="tab() !== 'func'" disabled class="text-gray-400">
+        <!--<li>
+          <button (click)="tab.set('func')" class="inline-block py-3 border-b-2" [class.border-black/80]="tab() === 'func'"
+            [class.border-transparent]="tab() !== 'func'" disabled class="text-gray-400">
             Funcionários
           </button>
-        </li>
+        </li>-->
         <li>
           <button (click)="tab.set('docs')"
             class="inline-block py-3 border-b-2"
@@ -100,6 +99,15 @@
   
     <!-- DOCUMENTOS -->
     <div *ngIf="tab() === 'docs'" class="grid gap-6">
+      <!-- Botão para adicionar documento -->
+      <div class="flex justify-end mb-4">
+        <button 
+          (click)="openDocModal()"
+          class="h-10 px-4 rounded-md font-semibold text-white bg-[#0f3d2e] hover:bg-[#0c3427] transition-colors">
+          <i class="fas fa-plus mr-2"></i>
+          Adicionar Documento
+        </button>
+      </div>
       <!-- Válidos -->
       <section>
         <div class="flex items-center gap-2 mb-2">
@@ -109,16 +117,29 @@
         <ul class="grid md:grid-cols-2 lg:grid-cols-3 gap-3" *ngIf="validos().length; else nv">
           <li *ngFor="let d of validos()" class="bg-emerald-50 border border-black/10 rounded-xl p-4 shadow-sm">
             <div class="flex items-start justify-between">
-              <div class="font-medium">{{ d.name }}</div>
+              <div class="font-medium">{{ d.clientName }}</div>
               <span class="text-xs rounded-md px-2 py-0.5 bg-emerald-100 text-emerald-700">Válido</span>
             </div>
-            <div class="text-xs text-neutral-600 mt-2">{{ d.issuer || d.docType }}</div>
+            <div class="text-xs text-neutral-600 mt-2">{{ d.docType }}</div>
             <div class="text-sm text-neutral-700 mt-1" *ngIf="d.expiresAt">Expira em: {{ d.expiresAt | date:'dd/MM/yyyy' }}</div>
-            <div class="mt-3 flex gap-2">
-              <button class="h-9 px-3 rounded-md border hover:bg-gray-50" (click)="download(d)">Baixar</button>
+            
+            <!-- Informações do arquivo -->
+            <div class="mt-2 flex gap-1 flex-wrap" *ngIf="d.fileName">
+              <span class="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">{{ d.fileName }}</span>
+              <span *ngIf="d.fileSize" class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">{{ (d.fileSize / 1024).toFixed(1) }}KB</span>
+            </div>
+            
+            <div class="mt-3 flex gap-2 flex-wrap">
+              <button class="h-9 px-3 rounded-md border hover:bg-gray-50" (click)="download(d)" *ngIf="d.fileName">Baixar</button>
               <label class="h-9 px-3 rounded-md border hover:bg-gray-50 cursor-pointer">
-                <input type="file" class="hidden" (change)="onFile(d,$event)" /> Atualizar
+                <input type="file" class="hidden" (change)="onFile(d,$event)" /> {{ d.fileName ? 'Atualizar' : 'Upload' }}
               </label>
+              <button class="h-9 px-3 rounded-md border hover:bg-blue-50 text-blue-600" (click)="openDocModal(d)">
+                Editar
+              </button>
+              <button class="h-9 px-3 rounded-md border hover:bg-red-50 text-red-600" (click)="deleteDoc(d)">
+                Excluir
+              </button>
             </div>
           </li>
         </ul>
@@ -134,16 +155,29 @@
         <ul class="grid md:grid-cols-2 lg:grid-cols-3 gap-3" *ngIf="aviso().length; else na">
           <li *ngFor="let d of aviso()" class="bg-amber-50 border border-black/10 rounded-xl p-4 shadow-sm">
             <div class="flex items-start justify-between">
-              <div class="font-medium">{{ d.name }}</div>
+              <div class="font-medium">{{ d.clientName }}</div>
               <span class="text-xs rounded-md px-2 py-0.5 bg-amber-100 text-amber-700">Atenção</span>
             </div>
-            <div class="text-xs text-neutral-600 mt-2">{{ d.issuer || d.docType }}</div>
+            <div class="text-xs text-neutral-600 mt-2">{{ d.docType }}</div>
             <div class="text-sm text-neutral-700 mt-1">Expira em: {{ d.expiresAt | date:'dd/MM/yyyy' }}</div>
-            <div class="mt-3 flex gap-2">
-              <button class="h-9 px-3 rounded-md border hover:bg-gray-50" (click)="download(d)">Baixar</button>
+            
+            <!-- Informações do arquivo -->
+            <div class="mt-2 flex gap-1 flex-wrap" *ngIf="d.fileName">
+              <span class="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">{{ d.fileName }}</span>
+              <span *ngIf="d.fileSize" class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">{{ (d.fileSize / 1024).toFixed(1) }}KB</span>
+            </div>
+            
+            <div class="mt-3 flex gap-2 flex-wrap">
+              <button class="h-9 px-3 rounded-md border hover:bg-gray-50" (click)="download(d)" *ngIf="d.fileName">Baixar</button>
               <label class="h-9 px-3 rounded-md border hover:bg-gray-50 cursor-pointer">
-                <input type="file" class="hidden" (change)="onFile(d,$event)" /> Atualizar
+                <input type="file" class="hidden" (change)="onFile(d,$event)" /> {{ d.fileName ? 'Atualizar' : 'Upload' }}
               </label>
+              <button class="h-9 px-3 rounded-md border hover:bg-blue-50 text-blue-600" (click)="openDocModal(d)">
+                Editar
+              </button>
+              <button class="h-9 px-3 rounded-md border hover:bg-red-50 text-red-600" (click)="deleteDoc(d)">
+                Excluir
+              </button>
             </div>
           </li>
         </ul>
@@ -159,16 +193,29 @@
         <ul class="grid md:grid-cols-2 lg:grid-cols-3 gap-3" *ngIf="expirados().length; else ne">
           <li *ngFor="let d of expirados()" class="bg-rose-50 border border-black/10 rounded-xl p-4 shadow-sm">
             <div class="flex items-start justify-between">
-              <div class="font-medium">{{ d.name }}</div>
+              <div class="font-medium">{{ d.clientName }}</div>
               <span class="text-xs rounded-md px-2 py-0.5 bg-rose-100 text-rose-700">Expirado</span>
             </div>
-            <div class="text-xs text-neutral-600 mt-2">{{ d.issuer || d.docType }}</div>
+            <div class="text-xs text-neutral-600 mt-2">{{ d.docType }}</div>
             <div class="text-sm text-neutral-700 mt-1" *ngIf="d.expiresAt">Expirou em: {{ d.expiresAt | date:'dd/MM/yyyy' }}</div>
-            <div class="mt-3 flex gap-2">
-              <button class="h-9 px-3 rounded-md border hover:bg-gray-50" (click)="download(d)">Baixar</button>
+            
+            <!-- Informações do arquivo -->
+            <div class="mt-2 flex gap-1 flex-wrap" *ngIf="d.fileName">
+              <span class="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">{{ d.fileName }}</span>
+              <span *ngIf="d.fileSize" class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">{{ (d.fileSize / 1024).toFixed(1) }}KB</span>
+            </div>
+            
+            <div class="mt-3 flex gap-2 flex-wrap">
+              <button class="h-9 px-3 rounded-md border hover:bg-gray-50" (click)="download(d)" *ngIf="d.fileName">Baixar</button>
               <label class="h-9 px-3 rounded-md border hover:bg-gray-50 cursor-pointer">
-                <input type="file" class="hidden" (change)="onFile(d,$event)" /> Atualizar
+                <input type="file" class="hidden" (change)="onFile(d,$event)" /> {{ d.fileName ? 'Atualizar' : 'Upload' }}
               </label>
+              <button class="h-9 px-3 rounded-md border hover:bg-blue-50 text-blue-600" (click)="openDocModal(d)">
+                Editar
+              </button>
+              <button class="h-9 px-3 rounded-md border hover:bg-red-50 text-red-600" (click)="deleteDoc(d)">
+                Excluir
+              </button>
             </div>
           </li>
         </ul>
@@ -177,4 +224,137 @@
     </div>
   
   </section>
+
+  <!-- Modal Bootstrap para Adicionar/Editar Documento -->
+  <div *ngIf="showDocModal()" class="modal fade show" 
+       tabindex="-1" role="dialog" aria-labelledby="docModalLabel" aria-hidden="false"
+       style="display: block; background-color: rgba(0,0,0,0.5);"
+       (click)="onModalBackdropClick($event)">
+    <div class="modal-dialog modal-lg" role="document" (click)="$event.stopPropagation()">
+      <div class="modal-content">
+        <!-- Cabeçalho do Modal -->
+        <div class="modal-header">
+          <h5 class="modal-title" id="docModalLabel">
+            {{ editingDocId ? 'Editar Documento' : 'Adicionar Documento' }}
+          </h5>
+          <button type="button" class="btn-close" (click)="closeDocModal()" aria-label="Close"></button>
+        </div>
+        
+        <!-- Corpo do Modal -->
+        <div class="modal-body">
+          <form [formGroup]="docForm" (ngSubmit)="saveDoc()" class="needs-validation" novalidate>
+            <div class="row g-3">
+              <!-- Nome do Cliente (obrigatório) -->
+              <div class="col-12">
+                <label for="clientName" class="form-label">Nome do Cliente/Empresa *</label>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  id="clientName"
+                  formControlName="clientName"
+                  placeholder="Ex: Empresa ABC Ltda, João Silva, etc."
+                  required
+                />
+                <div class="invalid-feedback" *ngIf="docForm.get('clientName')?.invalid && docForm.get('clientName')?.touched">
+                  Nome do cliente é obrigatório (mínimo 2 caracteres).
+                </div>
+              </div>
+              
+              <!-- Tipo do Documento (obrigatório) -->
+              <div class="col-12">
+                <label for="docType" class="form-label">Tipo do Documento *</label>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  id="docType"
+                  formControlName="docType"
+                  placeholder="Ex: Contrato de Prestação de Serviços, CNPJ, Alvará, etc."
+                  required
+                />
+                <div class="invalid-feedback" *ngIf="docForm.get('docType')?.invalid && docForm.get('docType')?.touched">
+                  Tipo do documento é obrigatório.
+                </div>
+              </div>
+              
+              <!-- Data de Emissão -->
+              <div class="col-md-6">
+                <label for="issueDate" class="form-label">Data de Emissão</label>
+                <input 
+                  type="date" 
+                  class="form-control" 
+                  id="issueDate"
+                  formControlName="issueDate"
+                />
+              </div>
+              
+              <!-- Data de Vencimento -->
+              <div class="col-md-6">
+                <label for="expiresAt" class="form-label">Data de Vencimento</label>
+                <input 
+                  type="date" 
+                  class="form-control" 
+                  id="expiresAt"
+                  formControlName="expiresAt"
+                />
+              </div>
+              
+              
+              <!-- Observações -->
+              <div class="col-12">
+                <label for="docNotes" class="form-label">Observações</label>
+                <textarea 
+                  class="form-control" 
+                  id="docNotes"
+                  formControlName="notes"
+                  rows="3"
+                  placeholder="Observações adicionais sobre o documento..."
+                ></textarea>
+              </div>
+              
+              <!-- Upload de Arquivo (apenas para documentos existentes) -->
+              <div class="col-12" *ngIf="editingDocId">
+                <label for="docFile" class="form-label">Arquivo do Documento</label>
+                <div class="input-group">
+                  <input 
+                    type="file" 
+                    class="form-control" 
+                    id="docFile"
+                    (change)="onFileUpload($event)"
+                    accept=".pdf,.doc,.docx"
+                  />
+                  <label class="input-group-text" for="docFile">
+                    <i class="fas fa-upload"></i>
+                  </label>
+                </div>
+                <div class="form-text">
+                  Formatos aceitos: PDF, DOC, DOCX (máximo 10MB)
+                </div>
+                <div *ngIf="uploadingFile" class="mt-2">
+                  <div class="progress">
+                    <div class="progress-bar" role="progressbar" [style.width.%]="uploadProgress"></div>
+                  </div>
+                  <small class="text-muted">Enviando arquivo... {{ uploadProgress }}%</small>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        
+        <!-- Rodapé do Modal -->
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeDocModal()">
+            {{ editingDocId ? 'Fechar' : 'Cancelar' }}
+          </button>
+          <button 
+            type="button" 
+            class="btn btn-primary" 
+            (click)="saveDoc()"
+            [disabled]="docForm.invalid || uploadingFile()"
+          >
+            {{ editingDocId ? 'Atualizar' : 'Criar' }} Documento
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
   

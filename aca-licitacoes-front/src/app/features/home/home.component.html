@@ -1,0 +1,107 @@
+<section class="space-y-6">
+  <!-- Seletor de Empresa -->
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-semibold tracking-tight">Dashboard</h1>
+    <div class="flex items-center gap-2">
+      <label class="text-sm font-medium text-gray-700">Empresa:</label>
+      <select 
+        [value]="companyId()" 
+        (change)="setCompany($any($event.target).value)"
+        class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="" disabled>Selecione uma empresa</option>
+        @for (company of companies(); track company.id) {
+          <option [value]="company.id">{{ company.name }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <!-- KPIs Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <!-- Docs Válidos -->
+    <div class="bg-white border border-black/10 rounded-xl p-4 shadow-sm">
+      <div class="text-2xl font-bold text-green-600">{{ docsKpi().valid }}</div>
+      <div class="text-sm text-gray-600">Docs Válidos</div>
+    </div>
+
+    <!-- A vencer (30d) -->
+    <div class="bg-white border border-black/10 rounded-xl p-4 shadow-sm">
+      <div class="text-2xl font-bold text-yellow-600">{{ docsKpi().expiring }}</div>
+      <div class="text-sm text-gray-600">A vencer (30d)</div>
+    </div>
+
+    <!-- Vencidos -->
+    <div class="bg-white border border-black/10 rounded-xl p-4 shadow-sm">
+      <div class="text-2xl font-bold text-red-600">{{ docsKpi().expired }}</div>
+      <div class="text-sm text-gray-600">Vencidos</div>
+    </div>
+
+    <!-- Licit. Futuras -->
+    <div class="bg-white border border-black/10 rounded-xl p-4 shadow-sm">
+      <div class="text-2xl font-bold text-blue-600">{{ licCounts().future }}</div>
+      <div class="text-sm text-gray-600">Licit. Futuras</div>
+    </div>
+
+    <!-- Licit. Passadas -->
+    <div class="bg-white border border-black/10 rounded-xl p-4 shadow-sm">
+      <div class="text-2xl font-bold text-gray-600">{{ licCounts().past }}</div>
+      <div class="text-sm text-gray-600">Licit. Passadas</div>
+    </div>
+  </div>
+
+  <!-- Próximas Licitações -->
+  <div class="bg-white border border-black/10 rounded-xl shadow-sm">
+    <div class="p-4 border-b border-gray-200">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold">Próximas Licitações</h2>
+        <button 
+          (click)="go('/licitacoes')"
+          class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Ver mais
+        </button>
+      </div>
+    </div>
+    
+    <div class="p-4">
+      @if (nextFive().length > 0) {
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-gray-200">
+                <th class="text-left py-2 text-sm font-medium text-gray-700">Data</th>
+                <th class="text-left py-2 text-sm font-medium text-gray-700">Título</th>
+                <th class="text-left py-2 text-sm font-medium text-gray-700">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (lic of nextFive(); track lic.id) {
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                  <td class="py-3 text-sm text-gray-900">{{ lic.formattedDate }}</td>
+                  <td class="py-3 text-sm text-gray-900 truncate max-w-xs" [title]="lic.title">
+                    {{ lic.title }}
+                  </td>
+                  <td class="py-3">
+                    <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full
+                      {{ lic.status === 'open' ? 'bg-green-100 text-green-800' : 
+                         lic.status === 'closed' ? 'bg-gray-100 text-gray-800' : 
+                         lic.status === 'cancelled' ? 'bg-red-100 text-red-800' : 
+                         'bg-yellow-100 text-yellow-800' }}">
+                      {{ lic.status }}
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="text-center py-8 text-gray-500">
+          Nada agendado.
+        </div>
+      }
+    </div>
+  </div>
+</section>
+  
