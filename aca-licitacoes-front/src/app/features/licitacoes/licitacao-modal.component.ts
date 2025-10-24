@@ -1,25 +1,14 @@
 import { Component, effect, inject, input, Output, EventEmitter, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LicitacoesService, Licitacao } from './licitacoes.service';
-
-interface LicDoc {
-  id?: string;
-  name: string;
-  docType?: string;
-  required?: boolean;
-  submitted?: boolean;
-  signed?: boolean;
-  issueDate?: string;
-  expiresAt?: string;
-  notes?: string;
-}
+import { FormsModule } from '@angular/forms';
+import { LicitacoesService, Licitacao, LicitacaoDocument, CreateLicDocDto, UpdateLicDocDto } from './licitacoes.service';
 
 type Tab = 'geral' | 'documentos';
 
 @Component({
   standalone: true,
   selector: 'app-licitacao-modal',
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './licitacao-modal.component.html',
   styleUrls: ['./licitacao-modal.component.css'],
 })
@@ -38,7 +27,28 @@ export class LicitacaoModalComponent {
   loading = signal(false);
   error = signal('');
   lic = signal<Licitacao | null>(null);
-  docs = signal<LicDoc[]>([]);
+  docs = signal<LicitacaoDocument[]>([]);
+  
+  // Document management
+  showDocModal = signal(false);
+  editingDoc = signal<LicitacaoDocument | null>(null);
+  docForm = signal<CreateLicDocDto>({
+    name: '',
+    docType: '',
+    required: true,
+    submitted: false,
+    signed: false,
+    issueDate: '',
+    expiresAt: '',
+    notes: ''
+  });
+  docLoading = signal(false);
+  docError = signal('');
+  
+  // File upload
+  selectedFile = signal<File | null>(null);
+  uploadProgress = signal(0);
+  uploading = signal(false);
 
   constructor() {
     // sempre que open() ou licId() mudarem para um estado válido, carregue
@@ -67,7 +77,7 @@ export class LicitacaoModalComponent {
     });
 
     this.api.listDocuments(id).subscribe({
-      next: (arr) => this.docs.set(arr as LicDoc[]),
+      next: (arr) => this.docs.set(arr),
       error: () => this.docs.set([]), // documentos são complementares – não bloqueia
     });
   }
@@ -83,4 +93,197 @@ export class LicitacaoModalComponent {
   }
 
   close() { this.closed.emit(); }
+
+  // Document management methods
+  openDocModal(doc?: LicitacaoDocument) {
+    if (doc) {
+      this.editingDoc.set(doc);
+      this.docForm.set({
+        name: doc.name,
+        docType: doc.docType || '',
+        required: doc.required,
+        submitted: doc.submitted,
+        signed: doc.signed,
+        issueDate: doc.issueDate ? new Date(doc.issueDate).toISOString().slice(0, 16) : '',
+        expiresAt: doc.expiresAt ? new Date(doc.expiresAt).toISOString().slice(0, 16) : '',
+        notes: doc.notes || ''
+      });
+    } else {
+      this.editingDoc.set(null);
+      this.docForm.set({
+        name: '',
+        docType: '',
+        required: true,
+        submitted: false,
+        signed: false,
+        issueDate: '',
+        expiresAt: '',
+        notes: ''
+      });
+    }
+    this.docError.set('');
+    this.showDocModal.set(true);
+  }
+
+  closeDocModal() {
+    this.showDocModal.set(false);
+    this.editingDoc.set(null);
+    this.docError.set('');
+  }
+
+  saveDocument() {
+    if (!this.docForm().name.trim()) {
+      this.docError.set('Nome do documento é obrigatório');
+      return;
+    }
+
+    this.docLoading.set(true);
+    this.docError.set('');
+
+    const data = { ...this.docForm() };
+    if (data.issueDate) {
+      data.issueDate = new Date(data.issueDate).toISOString();
+    }
+    if (data.expiresAt) {
+      data.expiresAt = new Date(data.expiresAt).toISOString();
+    }
+
+    console.log('Salvando documento:', data);
+    console.log('Licitação ID:', this.licId());
+
+    const operation = this.editingDoc() 
+      ? this.api.updateDocument(this.licId()!, this.editingDoc()!.id, data as UpdateLicDocDto)
+      : this.api.addDocument(this.licId()!, data);
+
+    operation.subscribe({
+      next: (response) => {
+        console.log('Documento salvo com sucesso:', response);
+        this.docLoading.set(false);
+        this.closeDocModal();
+        this.loadDocuments();
+      },
+      error: (err) => {
+        console.error('Erro ao salvar documento:', err);
+        this.docLoading.set(false);
+        this.docError.set(err?.error?.message || 'Erro ao salvar documento');
+      }
+    });
+  }
+
+  deleteDocument(doc: LicitacaoDocument) {
+    if (!confirm(`Tem certeza que deseja excluir o documento "${doc.name}"?`)) {
+      return;
+    }
+
+    this.api.deleteDocument(this.licId()!, doc.id).subscribe({
+      next: () => {
+        this.loadDocuments();
+      },
+      error: (err) => {
+        this.error.set(err?.error?.message || 'Erro ao excluir documento');
+      }
+    });
+  }
+
+  loadDocuments() {
+    if (!this.licId()) {
+      console.log('Licitação ID não disponível');
+      return;
+    }
+    
+    console.log('Carregando documentos para licitação:', this.licId());
+    
+    this.api.listDocuments(this.licId()!).subscribe({
+      next: (arr) => {
+        console.log('Documentos carregados:', arr);
+        this.docs.set(arr);
+      },
+      error: (err) => {
+        console.error('Erro ao carregar documentos:', err);
+        this.docs.set([]);
+      }
+    });
+  }
+
+  // File upload methods
+  onFileSelected(event: Event) {
+    console.log('Arquivo selecionado:', event);
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      console.log('Arquivo:', file.name, 'Tipo:', file.type, 'Tamanho:', file.size);
+      
+      // Validate file type
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ];
+      
+      if (!allowedTypes.includes(file.type)) {
+        console.log('Tipo de arquivo não permitido:', file.type);
+        this.docError.set('Tipo de arquivo não permitido. Use PDF, DOC ou DOCX.');
+        return;
+      }
+      
+      // Validate file size (10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        console.log('Arquivo muito grande:', file.size);
+        this.docError.set('Arquivo muito grande. Máximo 10MB.');
+        return;
+      }
+      
+      this.selectedFile.set(file);
+      this.docError.set('');
+      console.log('Arquivo selecionado com sucesso');
+    }
+  }
+
+  uploadFile(doc: LicitacaoDocument) {
+    const file = this.selectedFile();
+    if (!file) {
+      this.docError.set('Selecione um arquivo para upload');
+      return;
+    }
+
+    this.uploading.set(true);
+    this.uploadProgress.set(0);
+    this.docError.set('');
+
+    this.api.uploadDocument(this.licId()!, doc.id, file).subscribe({
+      next: (response) => {
+        this.uploading.set(false);
+        this.uploadProgress.set(100);
+        this.selectedFile.set(null);
+        this.loadDocuments();
+        console.log('Upload realizado com sucesso:', response);
+      },
+      error: (err) => {
+        this.uploading.set(false);
+        console.error('Erro no upload:', err);
+        this.docError.set(err?.error?.message || 'Erro no upload do arquivo');
+      }
+    });
+  }
+
+  downloadFile(doc: LicitacaoDocument) {
+    if (!doc.fileName) {
+      this.docError.set('Nenhum arquivo disponível para download');
+      return;
+    }
+
+    this.api.downloadDocument(this.licId()!, doc.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = doc.fileName || 'documento';
+        link.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        this.docError.set(err?.error?.message || 'Erro ao baixar arquivo');
+      }
+    });
+  }
 }

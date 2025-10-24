@@ -1,7 +1,8 @@
 import { Component, inject, signal, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { LicitacoesService, Licitacao, LicStatus } from './licitacoes.service';
+import { FormsModule } from '@angular/forms';
+import { LicitacoesService, Licitacao, LicStatus, CreateLicitacaoDto, UpdateLicitacaoDto } from './licitacoes.service';
 
 import { LicitacaoModalComponent } from './licitacao-modal.component';
 
@@ -18,14 +19,17 @@ interface CalendarDay {
 @Component({
   standalone: true,
   selector: 'app-licitacoes-list',
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, FormsModule, LicitacaoModalComponent],
   templateUrl: './licitacoes-list.component.html',
   styleUrls: ['./licitacoes-list.component.css'],
 })
 export class LicitacoesListComponent {
 
-    showModal = signal(false);
+  showModal = signal(false);
   selectedId = signal<string>('');
+  showCreateModal = signal(false);
+  showEditModal = signal(false);
+  editingLicitacao = signal<Licitacao | null>(null);
 
   private api = inject(LicitacoesService);
 
@@ -42,6 +46,17 @@ export class LicitacoesListComponent {
   // calendário (mês atual)
   today = new Date();
   currentMonth = signal(new Date(this.today.getFullYear(), this.today.getMonth(), 1));
+
+  // formulário de criação/edição
+  formData = signal<CreateLicitacaoDto>({
+    title: '',
+    status: 'draft',
+    editalUrl: '',
+    sessionDate: '',
+    submissionDeadline: ''
+  });
+  formLoading = signal(false);
+  formError = signal('');
 
   constructor() {
     effect(() => {
@@ -140,5 +155,109 @@ export class LicitacoesListComponent {
       case 'awarded': return 'bg-sky-100 text-sky-700';
       default: return 'bg-neutral-100 text-neutral-700'; // draft
     }
+  }
+
+  // Ações do modal
+  openModal(id: string) {
+    this.selectedId.set(id);
+    this.showModal.set(true);
+  }
+
+  closeModal() {
+    this.showModal.set(false);
+    this.selectedId.set('');
+  }
+
+  // Ações de criação
+  openCreateModal() {
+    this.formData.set({
+      title: '',
+      status: 'draft',
+      editalUrl: '',
+      sessionDate: '',
+      submissionDeadline: ''
+    });
+    this.formError.set('');
+    this.showCreateModal.set(true);
+  }
+
+  closeCreateModal() {
+    this.showCreateModal.set(false);
+    this.formError.set('');
+  }
+
+  // Ações de edição
+  openEditModal(licitacao: Licitacao) {
+    this.editingLicitacao.set(licitacao);
+    this.formData.set({
+      title: licitacao.title,
+      status: licitacao.status,
+      editalUrl: licitacao.editalUrl || '',
+      sessionDate: licitacao.sessionDate ? new Date(licitacao.sessionDate).toISOString().slice(0, 16) : '',
+      submissionDeadline: licitacao.submissionDeadline ? new Date(licitacao.submissionDeadline).toISOString().slice(0, 16) : ''
+    });
+    this.formError.set('');
+    this.showEditModal.set(true);
+  }
+
+  closeEditModal() {
+    this.showEditModal.set(false);
+    this.editingLicitacao.set(null);
+    this.formError.set('');
+  }
+
+  // Salvar licitação
+  saveLicitacao() {
+    if (!this.formData().title.trim()) {
+      this.formError.set('Título é obrigatório');
+      return;
+    }
+
+    this.formLoading.set(true);
+    this.formError.set('');
+
+    const data = { ...this.formData() };
+    if (data.sessionDate) {
+      data.sessionDate = new Date(data.sessionDate).toISOString();
+    }
+    if (data.submissionDeadline) {
+      data.submissionDeadline = new Date(data.submissionDeadline).toISOString();
+    }
+
+    const operation = this.editingLicitacao() 
+      ? this.api.update(this.editingLicitacao()!.id, data as UpdateLicitacaoDto)
+      : this.api.create(data);
+
+    operation.subscribe({
+      next: () => {
+        this.formLoading.set(false);
+        this.closeCreateModal();
+        this.closeEditModal();
+        this.refresh();
+      },
+      error: (err) => {
+        this.formLoading.set(false);
+        this.formError.set(err?.error?.message || 'Erro ao salvar licitação');
+      }
+    });
+  }
+
+  // Excluir licitação
+  deleteLicitacao(licitacao: Licitacao) {
+    if (!confirm(`Tem certeza que deseja excluir a licitação "${licitacao.title}"?`)) {
+      return;
+    }
+
+    this.loading.set(true);
+    this.api.remove(licitacao.id).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.refresh();
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.error.set(err?.error?.message || 'Erro ao excluir licitação');
+      }
+    });
   }
 }

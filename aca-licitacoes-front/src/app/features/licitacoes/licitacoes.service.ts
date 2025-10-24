@@ -32,7 +32,26 @@ export interface UpdateLicitacaoDto {
   submissionDeadline?: string;
 }
 
-export interface LicDocDto {
+export interface LicitacaoDocument {
+  id: string;
+  name: string;
+  docType?: string;
+  required: boolean;
+  submitted: boolean;
+  signed: boolean;
+  issueDate?: string;
+  expiresAt?: string;
+  notes?: string;
+  licitacaoId: string;
+  fileName?: string;
+  fileMime?: string;
+  fileSize?: number;
+  fileSha256?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateLicDocDto {
   name: string;
   docType?: string;
   required?: boolean;
@@ -41,6 +60,31 @@ export interface LicDocDto {
   issueDate?: string;
   expiresAt?: string;
   notes?: string;
+}
+
+export interface UpdateLicDocDto {
+  name?: string;
+  docType?: string;
+  required?: boolean;
+  submitted?: boolean;
+  signed?: boolean;
+  issueDate?: string;
+  expiresAt?: string;
+  notes?: string;
+}
+
+export interface LicitacaoEvent {
+  id: string;
+  type: string;
+  payload: any;
+  licitacaoId: string;
+  createdById: string;
+  createdAt: string;
+}
+
+export interface CreateLicEventDto {
+  type: string;
+  payload: any;
 }
 
 export interface LicSummary {
@@ -84,28 +128,49 @@ export class LicitacoesService {
     return this.http.delete<{ message: string }>(`${this.base}/${id}`);
   }
 
-  // DOCUMENTOS: GET/POST /licitacoes/:id/documents
+  // DOCUMENTOS: GET/POST/PATCH/DELETE /licitacoes/:id/documents
   listDocuments(licId: string) {
-    return this.http.get<any[]>(`${this.base}/${licId}/documents`);
+    console.log('Service: Listando documentos para licitação:', licId);
+    return this.http.get<LicitacaoDocument[]>(`${this.base}/${licId}/documents`);
   }
-  addDocument(licId: string, dto: LicDocDto) {
-    return this.http.post<any>(`${this.base}/${licId}/documents`, dto);
+  
+  addDocument(licId: string, dto: CreateLicDocDto) {
+    console.log('Service: Adicionando documento:', dto, 'para licitação:', licId);
+    return this.http.post<LicitacaoDocument>(`${this.base}/${licId}/documents`, dto);
+  }
+  
+  updateDocument(licId: string, docId: string, dto: UpdateLicDocDto) {
+    return this.http.patch<LicitacaoDocument>(`${this.base}/${licId}/documents/${docId}`, dto);
+  }
+  
+  deleteDocument(licId: string, docId: string) {
+    return this.http.delete<{ message: string }>(`${this.base}/${licId}/documents/${docId}`);
   }
 
   // UPLOAD DE ARQUIVO DO DOCUMENTO: POST /licitacoes/:id/documents/:docId/upload (multipart)
   uploadDocument(licId: string, docId: string, file: File) {
+    console.log('Service: Upload de arquivo:', file.name, 'para documento:', docId, 'licitação:', licId);
     const form = new FormData();
     form.append('file', file);
+    console.log('Service: FormData criado, enviando...');
     // não setar Content-Type (o browser define)
-    return this.http.post<any>(`${this.base}/${licId}/documents/${docId}/upload`, form);
+    return this.http.post<LicitacaoDocument>(`${this.base}/${licId}/documents/${docId}/upload`, form);
+  }
+
+  // DOWNLOAD DE ARQUIVO: GET /licitacoes/:id/documents/:docId/file
+  downloadDocument(licId: string, docId: string) {
+    return this.http.get(`${this.base}/${licId}/documents/${docId}/file`, { 
+      responseType: 'blob' 
+    });
   }
 
   // EVENTOS: GET/POST /licitacoes/:id/events
   listEvents(licId: string) {
-    return this.http.get<any[]>(`${this.base}/${licId}/events`);
+    return this.http.get<LicitacaoEvent[]>(`${this.base}/${licId}/events`);
   }
-  addEvent(licId: string, evt: { type: string; payload: any }) {
-    return this.http.post<any>(`${this.base}/${licId}/events`, evt);
+  
+  addEvent(licId: string, evt: CreateLicEventDto) {
+    return this.http.post<LicitacaoEvent>(`${this.base}/${licId}/events`, evt);
   }
 
   // RESUMO: GET /licitacoes/:id/summary
