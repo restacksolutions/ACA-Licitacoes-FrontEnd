@@ -329,11 +329,11 @@
                 <div class="form-text">
                   Formatos aceitos: PDF, DOC, DOCX (máximo 10MB)
                 </div>
-                <div *ngIf="uploadingFile" class="mt-2">
+                <div *ngIf="uploadingFile()" class="mt-2">
                   <div class="progress">
-                    <div class="progress-bar" role="progressbar" [style.width.%]="uploadProgress"></div>
+                    <div class="progress-bar" role="progressbar" [style.width.%]="uploadProgress()"></div>
                   </div>
-                  <small class="text-muted">Enviando arquivo... {{ uploadProgress }}%</small>
+                  <small class="text-muted">Enviando arquivo... {{ uploadProgress() }}%</small>
                 </div>
               </div>
             </div>

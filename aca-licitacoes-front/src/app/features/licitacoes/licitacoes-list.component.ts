@@ -1,6 +1,5 @@
 import { Component, inject, signal, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { LicitacoesService, Licitacao, LicStatus, CreateLicitacaoDto, UpdateLicitacaoDto } from './licitacoes.service';
 
@@ -19,7 +18,7 @@ interface CalendarDay {
 @Component({
   standalone: true,
   selector: 'app-licitacoes-list',
-  imports: [CommonModule, RouterLink, FormsModule, LicitacaoModalComponent],
+  imports: [CommonModule, FormsModule, LicitacaoModalComponent],
   templateUrl: './licitacoes-list.component.html',
   styleUrls: ['./licitacoes-list.component.css'],
 })
