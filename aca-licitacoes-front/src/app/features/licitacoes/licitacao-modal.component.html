@@ -17,7 +17,7 @@
           </h3>
           <span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs"
                 [ngClass]="badgeClass(lic()?.status)">
-            {{ lic()?.status || '—' }}
+            {{ statusLabel(lic()?.status) }}
           </span>
         </div>
         <div class="text-xs text-neutral-500">
@@ -73,7 +73,7 @@
         <div class="grid md:grid-cols-2 gap-4">
           <div>
             <div class="text-xs text-neutral-500">Status</div>
-            <div class="font-medium capitalize">{{ lic()?.status || '—' }}</div>
+            <div class="font-medium capitalize">{{ statusLabel(lic()?.status) }}</div>
           </div>
 
           <div>
@@ -111,12 +111,12 @@
           <h4 class="text-lg font-semibold">Documentos</h4>
           <div class="flex items-center gap-2">
             <button 
-              class="h-9 px-3 rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+              class="h-9 px-3 rounded-md text-green-700 bg-green-200 hover:bg-green-400 text-green-800 disabled:opacity-50"
               (click)="analyzeWithAI()"
               [disabled]="analyzingWithAI()"
             >
-              <span *ngIf="!analyzingWithAI()">🤖 Análise com IA</span>
-              <span *ngIf="analyzingWithAI()">⏳ Analisando...</span>
+              <span *ngIf="!analyzingWithAI()">Análise com IA</span>
+              <span *ngIf="analyzingWithAI()">Analisando...</span>
             </button>
             <button 
               class="h-9 px-3 rounded-md text-white bg-[#0f3d2e] hover:bg-[#0c3427]"
@@ -127,25 +127,7 @@
           </div>
         </div>
         
-        <!-- Debug info -->
-        <div class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm">
-          <p><strong>Debug:</strong> Licitação ID: {{ licId() }}</p>
-          <p><strong>Documentos carregados:</strong> {{ docs().length }}</p>
-          <div class="flex gap-2 mt-2">
-            <button 
-              class="h-7 px-2 rounded-md border border-yellow-300 text-yellow-700 hover:bg-yellow-100 text-xs"
-              (click)="loadDocuments()"
-            >
-              Recarregar Documentos
-            </button>
-            <button 
-              class="h-7 px-2 rounded-md border border-green-300 text-green-700 hover:bg-green-100 text-xs"
-              (click)="openDocModal()"
-            >
-              Testar Modal
-            </button>
-          </div>
-        </div>
+       
 
         <div *ngIf="docs().length === 0" class="border border-dashed border-black/10 rounded-xl p-6 text-center text-neutral-500">
           Nenhum documento cadastrado para esta licitação.
@@ -228,12 +210,7 @@
                 </button>
                 <p class="text-xs text-neutral-500 mt-1">PDF, DOC ou DOCX (máx. 10MB)</p>
                 
-                <!-- Debug info -->
-                <div class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
-                  <p><strong>Debug:</strong> Arquivo selecionado: {{ selectedFile()?.name || 'Nenhum' }}</p>
-                  <p><strong>Tipo:</strong> {{ selectedFile()?.type || 'N/A' }}</p>
-                  <p><strong>Tamanho:</strong> {{ selectedFile()?.size || 0 | number }} bytes</p>
-                </div>
+             
                 
                 <div *ngIf="selectedFile()" class="mt-2">
                   <p class="text-sm text-green-600 font-medium">{{ selectedFile()?.name }}</p>

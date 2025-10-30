@@ -146,6 +146,17 @@ export class LicitacoesListComponent {
     return intl.format(d);
   });
 
+  statusLabel(s: LicStatus) {
+    switch (s) {
+      case 'draft': return 'Rascunho';
+      case 'open': return 'Aberta';
+      case 'closed': return 'Encerrada';
+      case 'cancelled': return 'Cancelada';
+      case 'awarded': return 'Adjudicada';
+      default: return s;
+    }
+  }
+
   badgeClass(s: LicStatus) {
     switch (s) {
       case 'open': return 'bg-emerald-100 text-emerald-700';

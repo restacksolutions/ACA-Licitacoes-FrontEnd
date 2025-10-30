@@ -3,52 +3,63 @@
   <div class="flex items-center justify-between">
     <h1 class="text-2xl font-semibold tracking-tight">Dashboard</h1>
     <div class="flex items-center gap-2">
-      <label class="text-sm font-medium text-gray-700">Empresa: </label>
-      <select 
-        [value]="companyId()" 
-        (change)="setCompany($any($event.target).value)"
-        class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-      >
-        <option value="" disabled>Selecione uma empresa</option>
-        @for (company of companies(); track company.id) {
-          <option [value]="company.id">{{ company.name }}</option>
-        }
-      </select>
+      <label class="text-sm font-medium text-gray-300">{{ activeCompany()?.name }}</label>
     </div>
   </div>
 
-  <!-- KPIs Cards -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-    <!-- Docs Válidos -->
-    <div class="bg-white border border-black/10 rounded-xl p-4 shadow-sm">
-      <div class="text-2xl font-bold text-green-600">{{ docsKpi().valid }}</div>
-      <div class="text-sm text-gray-600">Docs Válidos</div>
+ <!-- KPIs -->
+<div class="space-y-6">
+
+  <!-- Grupo: Documentos -->
+  <section aria-labelledby="kpi-docs-title">
+    <div class="flex items-center justify-between">
+      <h2 id="kpi-docs-title" class="text-lg font-semibold">Documentos</h2>
     </div>
 
-    <!-- A vencer (30d) -->
-    <div class="bg-white border border-black/10 rounded-xl p-4 shadow-sm">
-      <div class="text-2xl font-bold text-yellow-600">{{ docsKpi().expiring }}</div>
-      <div class="text-sm text-gray-600">A vencer (30d)</div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <!-- Docs Válidos -->
+      <div class="bg-white border border-black/10 rounded-xl p-4 shadow-sm">
+        <div class="text-2xl font-bold text-green-600">{{ docsKpi().valid }}</div>
+        <div class="text-sm text-gray-600">Válidos</div>
+      </div>
+
+      <!-- A vencer (30d) -->
+      <div class="bg-white border border-black/10 rounded-xl p-4 shadow-sm">
+        <div class="text-2xl font-bold text-yellow-600">{{ docsKpi().expiring }}</div>
+        <div class="text-sm text-gray-600">A vencer (30d)</div>
+      </div>
+
+      <!-- Vencidos -->
+      <div class="bg-white border border-black/10 rounded-xl p-4 shadow-sm">
+        <div class="text-2xl font-bold text-red-600">{{ docsKpi().expired }}</div>
+        <div class="text-sm text-gray-600">Vencidos</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Grupo: Licitações -->
+  <section aria-labelledby="kpi-lic-title">
+    <div class="flex items-center justify-between">
+      <h2 id="kpi-lic-title" class="text-lg font-semibold">Licitações</h2>
     </div>
 
-    <!-- Vencidos -->
-    <div class="bg-white border border-black/10 rounded-xl p-4 shadow-sm">
-      <div class="text-2xl font-bold text-red-600">{{ docsKpi().expired }}</div>
-      <div class="text-sm text-gray-600">Vencidos</div>
-    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
+      <!-- Licit. Futuras -->
+      <div class="bg-white border border-black/10 rounded-xl p-4 shadow-sm">
+        <div class="text-2xl font-bold text-blue-600">{{ licCounts().future }}</div>
+        <div class="text-sm text-gray-600">Futuras</div>
+      </div>
 
-    <!-- Licit. Futuras -->
-    <div class="bg-white border border-black/10 rounded-xl p-4 shadow-sm">
-      <div class="text-2xl font-bold text-blue-600">{{ licCounts().future }}</div>
-      <div class="text-sm text-gray-600">Licit. Futuras</div>
+      <!-- Licit. Passadas -->
+      <div class="bg-white border border-black/10 rounded-xl p-4 shadow-sm">
+        <div class="text-2xl font-bold text-gray-600">{{ licCounts().past }}</div>
+        <div class="text-sm text-gray-600">Passadas</div>
+      </div>
     </div>
+  </section>
 
-    <!-- Licit. Passadas -->
-    <div class="bg-white border border-black/10 rounded-xl p-4 shadow-sm">
-      <div class="text-2xl font-bold text-gray-600">{{ licCounts().past }}</div>
-      <div class="text-sm text-gray-600">Licit. Passadas</div>
-    </div>
-  </div>
+</div>
+
 
   <!-- Próximas Licitações -->
   <div class="bg-white border border-black/10 rounded-xl shadow-sm">
@@ -88,7 +99,7 @@
                          lic.status === 'closed' ? 'bg-gray-100 text-gray-800' : 
                          lic.status === 'cancelled' ? 'bg-red-100 text-red-800' : 
                          'bg-yellow-100 text-yellow-800' }}">
-                      {{ lic.status }}
+                      {{ statusLabel(lic.status) }}
                     </span>
                   </td>
                 </tr>

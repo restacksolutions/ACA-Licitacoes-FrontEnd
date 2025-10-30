@@ -90,7 +90,7 @@
               <td class="py-2 px-3">
                 <span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs"
                       [ngClass]="badgeClass(lic.status)">
-                  {{ lic.status }}
+                  {{ statusLabel(lic.status) }}
                 </span>
               </td>
               <td class="py-2 px-3 text-neutral-600">{{ lic.sessionDate | date:'short' }}</td>

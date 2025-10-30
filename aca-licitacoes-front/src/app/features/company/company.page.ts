@@ -46,18 +46,27 @@ export class CompanyPage {
 
   // ------- DOCUMENTOS -------
   docs = signal<CompanyDoc[]>([]);
+  search = signal('');
+  private matchesSearch(d: CompanyDoc): boolean {
+    const q = this.search().trim().toLowerCase();
+    if (!q) return true;
+    const values = [d.clientName, d.docType, d.fileName, d.notes]
+      .filter(Boolean)
+      .map(v => String(v).toLowerCase());
+    return values.some(v => v.includes(q));
+  }
   validos = computed(() => this.docs().filter(d => {
     const exp = parse(d.expiresAt); if (!exp) return false;
-    return exp >= addDays(new Date(), 30);
+    return exp >= addDays(new Date(), 30) && this.matchesSearch(d);
   }));
   aviso = computed(() => this.docs().filter(d => {
     const exp = parse(d.expiresAt); if (!exp) return false;
     const t = new Date();
-    return exp >= t && exp < addDays(t, 30);
+    return exp >= t && exp < addDays(t, 30) && this.matchesSearch(d);
   }));
   expirados = computed(() => this.docs().filter(d => {
     const exp = parse(d.expiresAt); if (!exp) return false;
-    return exp < new Date();
+    return exp < new Date() && this.matchesSearch(d);
   }));
 
   // Formulário para adicionar novo documento

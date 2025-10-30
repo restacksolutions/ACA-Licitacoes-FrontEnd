@@ -102,4 +102,15 @@ export class HomeComponent {
   go(url: string) {
     this.router.navigateByUrl(url);
   }
+
+  statusLabel(s: string | undefined) {
+    switch (s) {
+      case 'draft': return 'Rascunho';
+      case 'open': return 'Aberta';
+      case 'closed': return 'Encerrada';
+      case 'cancelled': return 'Cancelada';
+      case 'awarded': return 'Adjudicada';
+      default: return s || '—';
+    }
+  }
 }
