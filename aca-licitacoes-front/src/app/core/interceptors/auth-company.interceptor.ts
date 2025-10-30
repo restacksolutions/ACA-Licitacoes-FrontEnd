@@ -9,6 +9,11 @@ export const authCompanyInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
 
+  // requisições ao n8n não recebem headers (CORS)
+  if (req.url.includes('botmedflow-n8n.kucha.live')) {
+    return next(req);
+  }
+
   const token = inject(TokenService).get();
   const companyId = inject(CompanyService).get();
 

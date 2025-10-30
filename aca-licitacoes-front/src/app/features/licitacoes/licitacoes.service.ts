@@ -177,4 +177,15 @@ export class LicitacoesService {
   getSummary(licId: string) {
     return this.http.get<LicSummary>(`${this.base}/${licId}/summary`);
   }
+
+  // ANÁLISE COM IA: POST para webhook n8n via FormData (sem preflight/CORS)
+  analyzeWithAI(licId: string) {
+    const webhookUrl = `${environment.n8nBaseUrl}/webhook/licitacoes-analise`;
+
+    const form = new FormData();
+    form.append('uid', licId);
+
+    // Não adicionar headers e não usar withCredentials – o browser define o Content-Type
+    return this.http.post(webhookUrl, form);
+  }
 }

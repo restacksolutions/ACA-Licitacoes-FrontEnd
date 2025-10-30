@@ -109,12 +109,22 @@
       <div *ngIf="!loading() && !error() && tab() === 'documentos'">
         <div class="flex items-center justify-between mb-4">
           <h4 class="text-lg font-semibold">Documentos</h4>
-          <button 
-            class="h-9 px-3 rounded-md text-white bg-[#0f3d2e] hover:bg-[#0c3427]"
-            (click)="openDocModal()"
-          >
-            Adicionar Documento
-          </button>
+          <div class="flex items-center gap-2">
+            <button 
+              class="h-9 px-3 rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+              (click)="analyzeWithAI()"
+              [disabled]="analyzingWithAI()"
+            >
+              <span *ngIf="!analyzingWithAI()">🤖 Análise com IA</span>
+              <span *ngIf="analyzingWithAI()">⏳ Analisando...</span>
+            </button>
+            <button 
+              class="h-9 px-3 rounded-md text-white bg-[#0f3d2e] hover:bg-[#0c3427]"
+              (click)="openDocModal()"
+            >
+              Adicionar Documento
+            </button>
+          </div>
         </div>
         
         <!-- Debug info -->

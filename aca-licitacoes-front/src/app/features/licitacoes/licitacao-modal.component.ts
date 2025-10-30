@@ -49,6 +49,9 @@ export class LicitacaoModalComponent {
   selectedFile = signal<File | null>(null);
   uploadProgress = signal(0);
   uploading = signal(false);
+  
+  // AI Analysis
+  analyzingWithAI = signal(false);
 
   constructor() {
     // sempre que open() ou licId() mudarem para um estado válido, carregue
@@ -283,6 +286,47 @@ export class LicitacaoModalComponent {
       },
       error: (err) => {
         this.docError.set(err?.error?.message || 'Erro ao baixar arquivo');
+      }
+    });
+  }
+
+  // AI Analysis methods
+  analyzeWithAI() {
+    if (!this.licId()) {
+      this.error.set('ID da licitação não disponível');
+      return;
+    }
+
+    this.analyzingWithAI.set(true);
+    this.error.set('');
+
+    this.api.analyzeWithAI(this.licId()!).subscribe({
+      next: (response) => {
+        this.analyzingWithAI.set(false);
+        console.log('✅ Análise com IA iniciada com sucesso:', response);
+        alert('Análise com IA iniciada com sucesso!');
+      },
+      error: (err) => {
+        this.analyzingWithAI.set(false);
+        console.error('❌ Erro ao iniciar análise com IA:', {
+          status: err.status,
+          statusText: err.statusText,
+          error: err.error,
+          message: err.message,
+          url: err.url
+        });
+        
+        // Mensagem mais específica baseada no status
+        let errorMessage = 'Erro ao iniciar análise com IA';
+        if (err.status === 500) {
+          errorMessage = 'Erro interno do servidor n8n (500)';
+        } else if (err.status === 404) {
+          errorMessage = 'Webhook não encontrado (404)';
+        } else if (err.status === 0) {
+          errorMessage = 'Erro de conexão - verifique se o n8n está online';
+        }
+        
+        this.error.set(errorMessage);
       }
     });
   }
