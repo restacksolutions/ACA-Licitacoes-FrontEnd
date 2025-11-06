@@ -2,6 +2,7 @@ import { Component, effect, inject, input, Output, EventEmitter, signal } from '
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LicitacoesService, Licitacao, LicitacaoDocument, CreateLicDocDto, UpdateLicDocDto } from './licitacoes.service';
+import Swal from 'sweetalert2';
 
 type Tab = 'geral' | 'documentos';
 
@@ -311,11 +312,32 @@ export class LicitacaoModalComponent {
     this.analyzingWithAI.set(true);
     this.error.set('');
 
+    // Mostrar SweetAlert informando que a análise está sendo realizada
+    Swal.fire({
+      title: 'Análise em andamento',
+      html: 'Estamos processando a análise da licitação com IA. Por favor, aguarde...',
+      icon: 'info',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
     this.api.analyzeWithAI(this.licId()!).subscribe({
       next: (response) => {
         this.analyzingWithAI.set(false);
         console.log('✅ Análise com IA iniciada com sucesso:', response);
-        alert('Análise com IA iniciada com sucesso!');
+        
+        // Fechar o alerta de aguardo e mostrar sucesso
+        Swal.close();
+        Swal.fire({
+          title: 'Sucesso!',
+          text: 'Análise com IA iniciada com sucesso!',
+          icon: 'success',
+          confirmButtonText: 'OK'
+        });
       },
       error: (err) => {
         this.analyzingWithAI.set(false);
@@ -336,6 +358,15 @@ export class LicitacaoModalComponent {
         } else if (err.status === 0) {
           errorMessage = 'Erro de conexão - verifique se o n8n está online';
         }
+        
+        // Fechar o alerta de aguardo e mostrar erro
+        Swal.close();
+        Swal.fire({
+          title: 'Erro',
+          text: errorMessage,
+          icon: 'error',
+          confirmButtonText: 'OK'
+        });
         
         this.error.set(errorMessage);
       }
