@@ -24,7 +24,7 @@
         <input
           class="h-10 px-3 rounded-md border border-neutral-300 bg-white text-sm placeholder:text-neutral-400 outline-none
                  focus:border-[#0f3d2e] focus:ring-2 focus:ring-[#0f3d2e]/15"
-          formControlName="fullName" type="text" placeholder="Seu nome"
+          formControlName="fullName" type="text" placeholder="John Doe"
         />
         <small class="text-red-600 text-xs" *ngIf="form.controls.fullName.touched && form.controls.fullName.invalid">
           Informe seu nome (mín. 2 caracteres).
@@ -66,7 +66,7 @@
           <input
             class="h-10 px-3 rounded-md border border-neutral-300 bg-white text-sm placeholder:text-neutral-400 outline-none
                    focus:border-[#0f3d2e] focus:ring-2 focus:ring-[#0f3d2e]/15"
-            formControlName="confirm" type="password" placeholder="Repita a senha"
+            formControlName="confirm" type="password" placeholder="Ex.: Secret123!"
           />
           <small class="text-red-600 text-xs" *ngIf="form.controls.confirm.touched && form.controls.confirm.hasError('mismatch')">
             As senhas não coincidem.
@@ -81,7 +81,7 @@
           <input
             class="h-10 px-3 rounded-md border border-neutral-300 bg-white text-sm placeholder:text-neutral-400 outline-none
                    focus:border-[#0f3d2e] focus:ring-2 focus:ring-[#0f3d2e]/15"
-            formControlName="companyName" type="text" placeholder="Minha Empresa"
+            formControlName="companyName" type="text" placeholder="Acme Ltda."
           />
           <small class="text-red-600 text-xs" *ngIf="form.controls.companyName.touched && form.controls.companyName.invalid">
             Informe o nome da empresa (mín. 2 caracteres).
@@ -93,7 +93,7 @@
           <input
             class="h-10 px-3 rounded-md border border-neutral-300 bg-white text-sm placeholder:text-neutral-400 outline-none
                    focus:border-[#0f3d2e] focus:ring-2 focus:ring-[#0f3d2e]/15"
-            formControlName="cnpj" type="text" placeholder="00.000.000/0000-00"
+            formControlName="cnpj" type="text" placeholder="12.345.678/0001-90"
             (input)="onCnpjInput($event)"
           />
           <small class="text-red-600 text-xs" *ngIf="form.controls.cnpj.touched && form.controls.cnpj.hasError('cnpjInvalid')">

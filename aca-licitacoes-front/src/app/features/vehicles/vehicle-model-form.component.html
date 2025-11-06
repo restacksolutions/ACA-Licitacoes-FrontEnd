@@ -1,0 +1,682 @@
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-4">
+  <!-- Seção Geral (sempre visível) -->
+  <div class="accordion-section">
+    <div class="accordion-header" (click)="toggleSection('general')">
+      <span>1. Geral</span>
+      <span class="accordion-icon" [class.expanded]="isSectionExpanded('general')">▼</span>
+    </div>
+    <div class="accordion-content" *ngIf="isSectionExpanded('general')">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Marca *</label>
+          <select formControlName="brandId">
+            <option value="">Selecione...</option>
+            <option *ngFor="let brand of brands" [value]="brand.id">{{ brand.name }}</option>
+          </select>
+          <small class="text-red-600" *ngIf="form.get('brandId')?.invalid && form.get('brandId')?.touched">Obrigatório</small>
+        </div>
+
+        <div class="form-group">
+          <label>Modelo *</label>
+          <input type="text" formControlName="name" placeholder="Ex: Hilux CD 4x4 Diesel" />
+          <small class="text-red-600" *ngIf="form.get('name')?.invalid && form.get('name')?.touched">Obrigatório</small>
+        </div>
+
+        <div class="form-group">
+          <label>Ano *</label>
+          <input type="number" formControlName="year" placeholder="Ex: 2024" />
+        </div>
+
+        <div class="form-group">
+          <label>Categoria *</label>
+          <select formControlName="category">
+            <option value="">Selecione...</option>
+            <option *ngFor="let c of categories" [value]="c">{{ c }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Trem-de-força *</label>
+          <select formControlName="powertrain">
+            <option *ngFor="let p of powertrains" [value]="p">{{ p.toUpperCase() }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Versão/Acabamento (Trim)</label>
+          <input type="text" formControlName="trim" placeholder="Ex: CD, XLS, Limited" />
+        </div>
+
+        <div class="form-group">
+          <label>Nº de Portas</label>
+          <input type="number" formControlName="doors" placeholder="Ex: 4" />
+        </div>
+
+        <div class="form-group">
+          <label>Nº de Lugares</label>
+          <input type="number" formControlName="seatCount" placeholder="Ex: 5" />
+        </div>
+
+        <div class="form-group">
+          <label>Tração</label>
+          <select formControlName="drivetrain">
+            <option *ngFor="let d of drivetrains" [value]="d">{{ d }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Câmbio</label>
+          <select formControlName="transmission">
+            <option *ngFor="let t of transmissions" [value]="t">{{ t }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Nº de Marchas</label>
+          <input type="number" formControlName="gears" placeholder="Ex: 5 ou 6" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dimensões & Capacidades -->
+  <div class="accordion-section" *ngIf="showDimensions()">
+    <div class="accordion-header" (click)="toggleSection('dimensions')">
+      <span>2. Dimensões & Capacidades</span>
+      <span class="accordion-icon" [class.expanded]="isSectionExpanded('dimensions')">▼</span>
+    </div>
+    <div class="accordion-content" *ngIf="isSectionExpanded('dimensions')">
+      <div formGroupName="dimensions" class="form-grid">
+        <div class="form-group">
+          <label>Comprimento (mm)</label>
+          <input type="number" formControlName="length_mm" placeholder="Ex: 5330" />
+        </div>
+        <div class="form-group">
+          <label>Largura (mm)</label>
+          <input type="number" formControlName="width_mm" placeholder="Ex: 1855" />
+        </div>
+        <div class="form-group">
+          <label>Altura (mm)</label>
+          <input type="number" formControlName="height_mm" placeholder="Ex: 1815" />
+        </div>
+        <div class="form-group">
+          <label>Distância entre Eixos (mm)</label>
+          <input type="number" formControlName="wheelbase_mm" placeholder="Ex: 3085" />
+        </div>
+        <div class="form-group" *ngIf="showGroundClearance()">
+          <label>Altura do Solo (mm)</label>
+          <input type="number" formControlName="groundClearance_mm" placeholder="Ex: 217" />
+        </div>
+        <div class="form-group">
+          <label>Peso em Ordem de Marcha (kg)</label>
+          <input type="number" formControlName="curbWeight_kg" placeholder="Ex: 2145" />
+        </div>
+        <div class="form-group" *ngIf="showBootVolume()">
+          <label>Volume Porta-Malas (l)</label>
+          <input type="number" formControlName="bootVolume_l" placeholder="Ex: 400" />
+        </div>
+        <div class="form-group" *ngIf="showFrunk()">
+          <label>Volume Frunk - EV (l)</label>
+          <input type="number" formControlName="frunkVolume_l" placeholder="Ex: 100" />
+        </div>
+        <div class="form-group" *ngIf="showTowingCapacity()">
+          <label>Capacidade de Reboque (kg)</label>
+          <input type="number" formControlName="towingCapacity_kg" placeholder="Ex: 3500" />
+        </div>
+        <div class="form-group" *ngIf="showPayload()">
+          <label>Carga Útil (kg)</label>
+          <input type="number" formControlName="payload_kg" placeholder="Ex: 895" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mecânica (Combustão) - ICE/HEV/PHEV -->
+  <div class="accordion-section" *ngIf="showEngine()">
+    <div class="accordion-header" (click)="toggleSection('engine')">
+      <span>3. Mecânica (Combustão)</span>
+      <span class="accordion-icon" [class.expanded]="isSectionExpanded('engine')">▼</span>
+    </div>
+    <div class="accordion-content" *ngIf="isSectionExpanded('engine')">
+      <div formGroupName="engine" class="form-grid">
+        <div class="form-group">
+          <label>Cilindrada (cm³)</label>
+          <input type="number" formControlName="displacement_cc" placeholder="Ex: 2755" />
+        </div>
+        <div class="form-group">
+          <label>Cilindros</label>
+          <input type="number" formControlName="cylinders" placeholder="Ex: 4" />
+        </div>
+        <div class="form-group">
+          <label>Combustível</label>
+          <select formControlName="fuel">
+            <option value="flex">Flex</option>
+            <option value="gasolina">Gasolina</option>
+            <option value="diesel">Diesel</option>
+            <option value="etanol">Etanol</option>
+            <option value="gnv">GNV</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Aspiração</label>
+          <select formControlName="aspiration">
+            <option value="na">Naturalmente Aspirado</option>
+            <option value="turbo">Turbo</option>
+            <option value="supercharger">Supercharger</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Potência (CV)</label>
+          <input type="number" formControlName="power_hp" placeholder="Ex: 177" />
+        </div>
+        <div class="form-group">
+          <label>Potência (kW)</label>
+          <input type="number" formControlName="power_kW" placeholder="Ex: 130" />
+        </div>
+        <div class="form-group">
+          <label>Torque (Nm)</label>
+          <input type="number" formControlName="torque_Nm" placeholder="Ex: 450" />
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="startStop" id="startStop" />
+          <label for="startStop">Start/Stop</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Elétrico/Híbrido - HEV/PHEV/BEV -->
+  <div class="accordion-section" *ngIf="isEVLike()">
+    <div class="accordion-header" (click)="toggleSection('ev')">
+      <span>4. Elétrico/Híbrido</span>
+      <span class="accordion-icon" [class.expanded]="isSectionExpanded('ev')">▼</span>
+    </div>
+    <div class="accordion-content" *ngIf="isSectionExpanded('ev')">
+      <div formGroupName="ev" class="form-grid">
+        <div class="form-group">
+          <label>Arquitetura (V)</label>
+          <select formControlName="architectureV">
+            <option value="">-</option>
+            <option [value]="400">400V</option>
+            <option [value]="800">800V</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Bateria Bruta (kWh)</label>
+          <input type="number" formControlName="batteryGross_kWh" placeholder="Ex: 82" />
+        </div>
+        <div class="form-group">
+          <label>Bateria Útil (kWh) *</label>
+          <input type="number" formControlName="batteryUsable_kWh" placeholder="Ex: 75" />
+        </div>
+        <div class="form-group">
+          <label>Química</label>
+          <select formControlName="chemistry">
+            <option value="">-</option>
+            <option value="LFP">LFP</option>
+            <option value="NMC">NMC</option>
+            <option value="NCA">NCA</option>
+            <option value="LTO">LTO</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Arrefecimento</label>
+          <select formControlName="thermalManagement">
+            <option value="">-</option>
+            <option value="liquid">Líquido</option>
+            <option value="air">Ar</option>
+            <option value="passive">Passivo</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Nº de Motores</label>
+          <input type="number" formControlName="motorCount" placeholder="Ex: 1 ou 2" />
+        </div>
+        <div class="form-group">
+          <label>Potência Total (kW)</label>
+          <input type="number" formControlName="power_kW" placeholder="Ex: 150" />
+        </div>
+        <div class="form-group">
+          <label>Torque Total (Nm)</label>
+          <input type="number" formControlName="torque_Nm" placeholder="Ex: 310" />
+        </div>
+        <div class="form-group">
+          <label>Níveis de Regeneração</label>
+          <input type="number" formControlName="regenLevels" placeholder="Ex: 3" />
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="onePedalDrive" id="onePedal" />
+          <label for="onePedal">One-Pedal Drive</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Carregamento - PHEV/BEV -->
+  <div class="accordion-section" *ngIf="showCharge()">
+    <div class="accordion-header" (click)="toggleSection('charge')">
+      <span>5. Carregamento</span>
+      <span class="accordion-icon" [class.expanded]="isSectionExpanded('charge')">▼</span>
+    </div>
+    <div class="accordion-content" *ngIf="isSectionExpanded('charge')">
+      <div formGroupName="charge" class="form-grid">
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="portAC" id="portAC" />
+          <label for="portAC">Porta AC</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="portDC" id="portDC" />
+          <label for="portDC">Porta DC</label>
+        </div>
+        <div class="form-group">
+          <label>Carregador Onboard (kW)</label>
+          <input type="number" formControlName="onboardCharger_kW" placeholder="Ex: 11" />
+        </div>
+        <div class="form-group">
+          <label>Pico DC (kW)</label>
+          <input type="number" formControlName="dcPeak_kW" placeholder="Ex: 50" />
+        </div>
+        <div class="form-group">
+          <label>10-80% (min)</label>
+          <input type="number" formControlName="_10to80_time_min" placeholder="Ex: 30" />
+        </div>
+        <div class="form-group">
+          <label>0-100% (h)</label>
+          <input type="number" step="0.1" formControlName="_0to100_time_h" placeholder="Ex: 8.5" />
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="preconditioning" id="preconditioning" />
+          <label for="preconditioning">Pré-condicionamento</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="bidirectional" id="bidirectional" />
+          <label for="bidirectional">Bidirecional (V2L/V2G)</label>
+        </div>
+        <div class="form-group">
+          <label>Potência Bidirecional (kW)</label>
+          <input type="number" formControlName="bidirectionalPower_kW" placeholder="Ex: 3.6" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Desempenho -->
+  <div class="accordion-section" *ngIf="showPerformance()">
+    <div class="accordion-header" (click)="toggleSection('performance')">
+      <span>6. Desempenho</span>
+      <span class="accordion-icon" [class.expanded]="isSectionExpanded('performance')">▼</span>
+    </div>
+    <div class="accordion-content" *ngIf="isSectionExpanded('performance')">
+      <div formGroupName="performance" class="form-grid">
+        <div class="form-group">
+          <label>0-100 km/h (s)</label>
+          <input type="number" step="0.1" formControlName="_0to100_sec" placeholder="Ex: 11.5" />
+        </div>
+        <div class="form-group">
+          <label>0-60 mph (s)</label>
+          <input type="number" step="0.1" formControlName="_0to60_sec" placeholder="Ex: 7.2" />
+        </div>
+        <div class="form-group">
+          <label>Velocidade Máxima (km/h)</label>
+          <input type="number" formControlName="topSpeed_kmh" placeholder="Ex: 175" />
+        </div>
+        <div class="form-group">
+          <label>Frenagem 100-0 (m)</label>
+          <input type="number" step="0.1" formControlName="braking100to0_m" placeholder="Ex: 38.5" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Consumo/Autonomia -->
+  <div class="accordion-section">
+    <div class="accordion-header" (click)="toggleSection('economy')">
+      <span>7. Consumo/Autonomia</span>
+      <span class="accordion-icon" [class.expanded]="isSectionExpanded('economy')">▼</span>
+    </div>
+    <div class="accordion-content" *ngIf="isSectionExpanded('economy')">
+      <div formGroupName="economy" class="form-grid">
+        <div class="form-group" *ngIf="showEngine()">
+          <label>Consumo Cidade (l/100km)</label>
+          <input type="number" step="0.1" formControlName="city_l_100km" placeholder="Ex: 9.5" />
+        </div>
+        <div class="form-group" *ngIf="showEngine()">
+          <label>Consumo Estrada (l/100km)</label>
+          <input type="number" step="0.1" formControlName="highway_l_100km" placeholder="Ex: 12.5" />
+        </div>
+        <div class="form-group" *ngIf="showEngine()">
+          <label>Consumo Misto (l/100km)</label>
+          <input type="number" step="0.1" formControlName="mixed_l_100km" placeholder="Ex: 10.8" />
+        </div>
+        <div class="form-group" *ngIf="isEVLike()">
+          <label>Autonomia WLTP (km)</label>
+          <input type="number" formControlName="rangeWLTP_km" placeholder="Ex: 450" />
+        </div>
+        <div class="form-group" *ngIf="isEVLike()">
+          <label>Autonomia EPA (km)</label>
+          <input type="number" formControlName="rangeEPA_km" placeholder="Ex: 380" />
+        </div>
+        <div class="form-group">
+          <label>CO₂ (g/km)</label>
+          <input type="number" formControlName="co2_g_km" placeholder="Ex: 220" />
+        </div>
+        <div class="form-group">
+          <label>Padrão</label>
+          <select formControlName="standard">
+            <option value="Inmetro">Inmetro</option>
+            <option value="WLTP">WLTP</option>
+            <option value="EPA">EPA</option>
+            <option value="NEDC">NEDC</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chassi & Rodas -->
+  <div class="accordion-section">
+    <div class="accordion-header" (click)="toggleSection('chassis')">
+      <span>8. Chassi & Rodas</span>
+      <span class="accordion-icon" [class.expanded]="isSectionExpanded('chassis')">▼</span>
+    </div>
+    <div class="accordion-content" *ngIf="isSectionExpanded('chassis')">
+      <div formGroupName="chassis" class="form-grid">
+        <div class="form-group">
+          <label>Suspensão Dianteira</label>
+          <input type="text" formControlName="suspensionFront" placeholder="Ex: McPherson" />
+        </div>
+        <div class="form-group">
+          <label>Suspensão Traseira</label>
+          <input type="text" formControlName="suspensionRear" placeholder="Ex: Eixo rígido com molas" />
+        </div>
+        <div class="form-group">
+          <label>Freios Dianteiros</label>
+          <input type="text" formControlName="brakesFront" placeholder="Ex: Discos ventilados" />
+        </div>
+        <div class="form-group">
+          <label>Freios Traseiros</label>
+          <input type="text" formControlName="brakesRear" placeholder="Ex: Discos sólidos" />
+        </div>
+        <div class="form-group">
+          <label>Direção</label>
+          <input type="text" formControlName="steering" placeholder="Ex: Elétrica" />
+        </div>
+        <div class="form-group">
+          <label>Tamanho Aro (pol)</label>
+          <input type="number" formControlName="rimSize_inch" placeholder="Ex: 17" />
+        </div>
+        <div class="form-group">
+          <label>Pneu Dianteiro (ex: 225/45 R18)</label>
+          <input type="text" formControlName="tireSizeFront" placeholder="225/45 R18" />
+        </div>
+        <div class="form-group">
+          <label>Pneu Traseiro (ex: 225/45 R18)</label>
+          <input type="text" formControlName="tireSizeRear" placeholder="225/45 R18" />
+        </div>
+        <div class="form-group">
+          <label>Material Aro</label>
+          <select formControlName="rimMaterial">
+            <option value="">-</option>
+            <option value="aco">Aço</option>
+            <option value="liga-leve">Liga Leve</option>
+            <option value="carbon">Carbon</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Segurança & ADAS -->
+  <div class="accordion-section">
+    <div class="accordion-header" (click)="toggleSection('safety')">
+      <span>9. Segurança & ADAS</span>
+      <span class="accordion-icon" [class.expanded]="isSectionExpanded('safety')">▼</span>
+    </div>
+    <div class="accordion-content" *ngIf="isSectionExpanded('safety')">
+      <div formGroupName="safety" class="form-grid">
+        <div class="form-group">
+          <label>Total Airbags</label>
+          <input type="number" formControlName="airbags" placeholder="Ex: 7" />
+        </div>
+        <div class="form-group">
+          <label>Airbags Frontais</label>
+          <input type="number" formControlName="airbagsFront" placeholder="Ex: 2" />
+        </div>
+        <div class="form-group">
+          <label>Airbags Laterais</label>
+          <input type="number" formControlName="airbagsSide" placeholder="Ex: 2" />
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="airbagsCurtain" id="airbagsCurtain" />
+          <label for="airbagsCurtain">Airbags de Cortina</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="isofix" id="isofix" />
+          <label for="isofix">ISOFIX</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="abs" id="abs" />
+          <label for="abs">ABS</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="esc" id="esc" />
+          <label for="esc">ESC</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="acc" id="acc" />
+          <label for="acc">ACC (Adaptive Cruise Control)</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="lka" id="lka" />
+          <label for="lka">LKA (Lane Keeping Assist)</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="bsm" id="bsm" />
+          <label for="bsm">BSM (Blind Spot Monitor)</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="aeb" id="aeb" />
+          <label for="aeb">AEB (Autonomous Emergency Braking)</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="trafficSignRecognition" id="trafficSign" />
+          <label for="trafficSign">Leitura de Placas</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="parkingAssist" id="parkingAssist" />
+          <label for="parkingAssist">Assistente de Estacionamento</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="camera360" id="camera360" />
+          <label for="camera360">Câmera 360°</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Conforto & Infotainment -->
+  <div class="accordion-section" *ngIf="showComfort()">
+    <div class="accordion-header" (click)="toggleSection('comfort')">
+      <span>10. Conforto & Infotainment</span>
+      <span class="accordion-icon" [class.expanded]="isSectionExpanded('comfort')">▼</span>
+    </div>
+    <div class="accordion-content" *ngIf="isSectionExpanded('comfort')">
+      <div formGroupName="comfort" class="form-grid">
+        <div class="form-group">
+          <label>Ar Condicionado</label>
+          <select formControlName="acType">
+            <option value="manual">Manual</option>
+            <option value="digital">Digital</option>
+            <option value="dual-zone">Dual Zone</option>
+            <option value="tri-zone">Tri Zone</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Material Assentos</label>
+          <select formControlName="seatsMaterial">
+            <option value="">-</option>
+            <option value="tecido">Tecido</option>
+            <option value="couro">Couro</option>
+            <option value="alcantara">Alcantara</option>
+            <option value="sintetico">Sintético</option>
+          </select>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="seatsElectric" id="seatsElectric" />
+          <label for="seatsElectric">Ajuste Elétrico</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="seatsHeated" id="seatsHeated" />
+          <label for="seatsHeated">Aquecimento</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="seatsVentilated" id="seatsVentilated" />
+          <label for="seatsVentilated">Ventilação</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="panoramicRoof" id="panoramicRoof" />
+          <label for="panoramicRoof">Teto Panorâmico</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="sunroof" id="sunroof" />
+          <label for="sunroof">Teto Solar</label>
+        </div>
+        <div class="form-group">
+          <label>Tamanho Tela (pol)</label>
+          <input type="number" step="0.1" formControlName="displaySize_inch" placeholder="Ex: 8.0" />
+        </div>
+        <div class="form-group">
+          <label>Tipo Cluster</label>
+          <input type="text" formControlName="clusterType" placeholder="Ex: Digital 10.25" />
+        </div>
+        <div class="form-group">
+          <label>Apple CarPlay</label>
+          <select formControlName="carplay">
+            <option [value]="false">Não</option>
+            <option value="wired">Por Cabo</option>
+            <option value="wireless">Wireless</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Android Auto</label>
+          <select formControlName="androidAuto">
+            <option [value]="false">Não</option>
+            <option value="wired">Por Cabo</option>
+            <option value="wireless">Wireless</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Alto-falantes</label>
+          <input type="number" formControlName="speakers" placeholder="Ex: 10" />
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="ota" id="ota" />
+          <label for="ota">OTA Updates</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" formControlName="remoteApp" id="remoteApp" />
+          <label for="remoteApp">App Remoto</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Garantia & Manutenção -->
+  <div class="accordion-section">
+    <div class="accordion-header" (click)="toggleSection('warranty')">
+      <span>11. Garantia & Manutenção</span>
+      <span class="accordion-icon" [class.expanded]="isSectionExpanded('warranty')">▼</span>
+    </div>
+    <div class="accordion-content" *ngIf="isSectionExpanded('warranty')">
+      <div formGroupName="warranty" class="form-grid">
+        <div class="form-group">
+          <label>Garantia Veículo (anos)</label>
+          <input type="number" formControlName="vehicle_years" placeholder="Ex: 3" />
+        </div>
+        <div class="form-group">
+          <label>Garantia Veículo (km)</label>
+          <input type="number" formControlName="vehicle_km" placeholder="Ex: 100000" />
+        </div>
+        <div class="form-group" *ngIf="isEVLike()">
+          <label>Garantia Bateria (anos)</label>
+          <input type="number" formControlName="battery_years" placeholder="Ex: 8" />
+        </div>
+        <div class="form-group" *ngIf="isEVLike()">
+          <label>Garantia Bateria (km)</label>
+          <input type="number" formControlName="battery_km" placeholder="Ex: 160000" />
+        </div>
+        <div class="form-group">
+          <label>Intervalo Revisão (km)</label>
+          <input type="number" formControlName="serviceInterval_km" placeholder="Ex: 10000" />
+        </div>
+        <div class="form-group">
+          <label>Intervalo Revisão (meses)</label>
+          <input type="number" formControlName="serviceInterval_months" placeholder="Ex: 12" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mercado -->
+  <div class="accordion-section">
+    <div class="accordion-header" (click)="toggleSection('market')">
+      <span>12. Mercado</span>
+      <span class="accordion-icon" [class.expanded]="isSectionExpanded('market')">▼</span>
+    </div>
+    <div class="accordion-content" *ngIf="isSectionExpanded('market')">
+      <div formGroupName="market" class="form-grid">
+        <div class="form-group">
+          <label>Moeda</label>
+          <select formControlName="currency">
+            <option value="BRL">BRL</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Preço Mínimo *</label>
+          <input type="number" formControlName="price" placeholder="Ex: 89900" />
+          <small class="text-gray-500">Usado pela IA para comparar preços e encontrar o mais barato</small>
+        </div>
+        <div class="form-group">
+          <label>Disponibilidade</label>
+          <select formControlName="availability">
+            <option value="active">Ativo</option>
+            <option value="discontinued">Descontinuado</option>
+            <option value="preorder">Pré-venda</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Observações -->
+  <div class="form-group">
+    <label>Observações</label>
+    <textarea formControlName="notes" rows="3" placeholder="Observações adicionais sobre o veículo..."></textarea>
+  </div>
+
+  <div class="form-group">
+    <label>Tags (separadas por ponto e vírgula)</label>
+    <input type="text" formControlName="tags" placeholder="ex: pickup; off-road; diesel" />
+  </div>
+
+  <!-- Botões -->
+  <div class="flex items-center gap-3 pt-4 border-t">
+    <button
+      type="submit"
+      class="h-9 px-4 rounded-md text-white bg-[#0f3d2e] hover:bg-[#0c3427] disabled:opacity-50"
+      [disabled]="form.invalid"
+    >
+      Salvar
+    </button>
+    <button
+      type="button"
+      class="h-9 px-4 rounded-md border border-black/10 hover:bg-gray-50"
+      (click)="onCancel()"
+    >
+      Cancelar
+    </button>
+  </div>
+</form>
+

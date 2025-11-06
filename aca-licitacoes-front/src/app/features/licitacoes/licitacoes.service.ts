@@ -95,6 +95,19 @@ export interface LicSummary {
   coveragePercent: number;
 }
 
+export interface AnaliseLicitacaoResponse {
+  success: boolean;
+  message: string;
+  licitacaoId: string;
+  webhook: {
+    url: string;
+    status: number;
+    statusText: string;
+    responseData?: any;
+    timestamp: string;
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class LicitacoesService {
   private http = inject(HttpClient);
@@ -178,20 +191,23 @@ export class LicitacoesService {
     return this.http.get<LicSummary>(`${this.base}/${licId}/summary`);
   }
 
-  // ANÁLISE COM IA: POST para webhook n8n em formato JSON
+  // ANÁLISE COM IA (PRODUÇÃO): POST /licitacoes/:id/analise
+  // Envia a licitação para análise no n8n (ambiente de produção)
+  // Requer autenticação (Bearer token e X-Company-Id via interceptor)
   analyzeWithAI(licId: string) {
-    const webhookUrl = `${environment.n8nBaseUrl}/webhook/licitacoes-analise`;
+    return this.http.post<AnaliseLicitacaoResponse>(
+      `${this.base}/${licId}/analise`,
+      {}
+    );
+  }
 
-    const payload = {
-      licitacaoId: licId,
-      action: 'analyze'
-    };
-
-    // Envia em formato JSON
-    return this.http.post(webhookUrl, payload, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
+  // ANÁLISE COM IA (TESTE): POST /licitacoes/:id/analise-test
+  // Envia a licitação para análise no n8n (ambiente de teste)
+  // Útil para desenvolvimento e debugging
+  analyzeWithAITest(licId: string) {
+    return this.http.post<AnaliseLicitacaoResponse>(
+      `${this.base}/${licId}/analise-test`,
+      {}
+    );
   }
 }
