@@ -11,10 +11,13 @@
     <!-- Header -->
     <div class="px-5 py-3 border-b bg-white flex items-center justify-between">
       <div class="min-w-0">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
           <h3 class="text-lg font-semibold truncate" [title]="lic()?.title || 'Licitação'">
             {{ lic()?.title || 'Licitação' }}
           </h3>
+          <span *ngIf="lic()?.sessionDate" class="text-sm text-neutral-500 whitespace-nowrap">
+            {{ statusLabel(lic()?.status).toLowerCase() }} • {{ formatSessionDate(lic()?.sessionDate) }}
+          </span>
           <span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs"
                 [ngClass]="badgeClass(lic()?.status)">
             {{ statusLabel(lic()?.status) }}
@@ -82,7 +85,7 @@
           </div>
 
           <div>
-            <div class="text-xs text-neutral-500">Prazo de envio</div>
+            <div class="text-xs text-neutral-500">Prazo de Envio da Proposta</div>
             <div class="font-medium">{{ lic()?.submissionDeadline | date:'short' }}</div>
           </div>
 
