@@ -56,6 +56,7 @@ export class LicitacoesListComponent {
   formData = signal<CreateLicitacaoDto>({
     title: '',
     status: 'draft',
+    portal: '',
     editalUrl: '',
     sessionDate: '',
     submissionDeadline: ''
@@ -221,6 +222,7 @@ export class LicitacoesListComponent {
     this.formData.set({
       title: '',
       status: 'draft',
+      portal: '',
       editalUrl: '',
       sessionDate: '',
       submissionDeadline: ''
@@ -240,6 +242,7 @@ export class LicitacoesListComponent {
     this.formData.set({
       title: licitacao.title,
       status: licitacao.status,
+      portal: licitacao.portal || '',
       editalUrl: licitacao.editalUrl || '',
       sessionDate: licitacao.sessionDate ? new Date(licitacao.sessionDate).toISOString().slice(0, 16) : '',
       submissionDeadline: licitacao.submissionDeadline ? new Date(licitacao.submissionDeadline).toISOString().slice(0, 16) : ''
@@ -310,19 +313,50 @@ export class LicitacoesListComponent {
 
   // Excluir licitação
   deleteLicitacao(licitacao: Licitacao) {
-    if (!confirm(`Tem certeza que deseja excluir a licitação "${licitacao.title}"?`)) {
-      return;
-    }
-
-    this.loading.set(true);
-    this.api.remove(licitacao.id).subscribe({
-      next: () => {
-        this.loading.set(false);
-        this.refresh();
-      },
-      error: (err) => {
-        this.loading.set(false);
-        this.error.set(err?.error?.message || 'Erro ao excluir licitação');
+    Swal.fire({
+      title: 'Tem certeza?',
+      text: `Deseja excluir a licitação "${licitacao.title}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#0f3d2e',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sim, excluir',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.loading.set(true);
+        this.api.remove(licitacao.id).subscribe({
+          next: () => {
+            this.loading.set(false);
+            this.refresh();
+            Swal.fire({
+              icon: 'success',
+              title: 'Excluído!',
+              text: 'Licitação excluída com sucesso',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          },
+          error: (err) => {
+            this.loading.set(false);
+            let errorMessage = 'Erro ao excluir licitação';
+            
+            if (err?.status === 404) {
+              errorMessage = 'Licitação não encontrada';
+            } else if (err?.status === 409) {
+              errorMessage = 'Não é possível excluir esta licitação. Ela pode estar vinculada a outros recursos.';
+            } else if (err?.error?.message) {
+              errorMessage = err.error.message;
+            }
+            
+            Swal.fire({
+              icon: 'error',
+              title: 'Erro',
+              text: errorMessage,
+              confirmButtonText: 'OK'
+            });
+          }
+        });
       }
     });
   }

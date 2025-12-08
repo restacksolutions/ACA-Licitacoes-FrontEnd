@@ -89,8 +89,10 @@
               <td class="py-2 px-3 font-medium max-w-[360px]">
                 <div class="flex items-center gap-2">
                   <span class="truncate">{{ lic.title }}</span>
-                  <span *ngIf="lic.sessionDate" class="text-xs text-neutral-500 whitespace-nowrap">
-                    {{ statusLabel(lic.status).toLowerCase() }} • {{ formatSessionDate(lic.sessionDate) }}
+                  <span *ngIf="lic.portal || lic.sessionDate" class="text-xs text-neutral-500 whitespace-nowrap">
+                    <span *ngIf="lic.portal">{{ lic.portal }}</span>
+                    <span *ngIf="lic.portal && lic.sessionDate"> • </span>
+                    <span *ngIf="lic.sessionDate">{{ formatSessionDate(lic.sessionDate) }}</span>
                   </span>
                 </div>
               </td>
@@ -161,8 +163,10 @@
                       [ngClass]="badgeClass(it.status)">
                 <div class="flex items-center gap-1 truncate">
                   <span class="font-medium text-neutral-800 truncate">{{ it.title }}</span>
-                  <span *ngIf="it.sessionDate" class="text-[10px] text-neutral-500 whitespace-nowrap">
-                    {{ statusLabel(it.status).toLowerCase() }} • {{ formatSessionDate(it.sessionDate) }}
+                  <span *ngIf="it.portal || it.sessionDate" class="text-[10px] text-neutral-500 whitespace-nowrap">
+                    <span *ngIf="it.portal">{{ it.portal }}</span>
+                    <span *ngIf="it.portal && it.sessionDate"> • </span>
+                    <span *ngIf="it.sessionDate">{{ formatSessionDate(it.sessionDate) }}</span>
                   </span>
                 </div>
               </button>
@@ -211,6 +215,17 @@
             </div>
             
             <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium mb-1">Portal da Licitação</label>
+                <input
+                  type="text"
+                  class="w-full h-9 px-3 rounded-md border border-black/10 outline-none focus:ring focus:ring-[#0f3d2e]/15"
+                  [(ngModel)]="formData().portal"
+                  name="portal"
+                  placeholder="Ex: BBMNet, ComprasNet, etc."
+                />
+              </div>
+              
               <div>
                 <label class="block text-sm font-medium mb-1">Status</label>
                 <select
@@ -308,6 +323,17 @@
             </div>
             
             <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium mb-1">Portal da Licitação</label>
+                <input
+                  type="text"
+                  class="w-full h-9 px-3 rounded-md border border-black/10 outline-none focus:ring focus:ring-[#0f3d2e]/15"
+                  [(ngModel)]="formData().portal"
+                  name="portal"
+                  placeholder="Ex: BBMNet, ComprasNet, etc."
+                />
+              </div>
+              
               <div>
                 <label class="block text-sm font-medium mb-1">Status</label>
                 <select

@@ -15,8 +15,10 @@
           <h3 class="text-lg font-semibold truncate" [title]="lic()?.title || 'Licitação'">
             {{ lic()?.title || 'Licitação' }}
           </h3>
-          <span *ngIf="lic()?.sessionDate" class="text-sm text-neutral-500 whitespace-nowrap">
-            {{ statusLabel(lic()?.status).toLowerCase() }} • {{ formatSessionDate(lic()?.sessionDate) }}
+          <span *ngIf="lic()?.portal || lic()?.sessionDate" class="text-sm text-neutral-500 whitespace-nowrap">
+            <span *ngIf="lic()?.portal">{{ lic()?.portal }}</span>
+            <span *ngIf="lic()?.portal && lic()?.sessionDate"> • </span>
+            <span *ngIf="lic()?.sessionDate">{{ formatSessionDate(lic()?.sessionDate) }}</span>
           </span>
           <span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs"
                 [ngClass]="badgeClass(lic()?.status)">

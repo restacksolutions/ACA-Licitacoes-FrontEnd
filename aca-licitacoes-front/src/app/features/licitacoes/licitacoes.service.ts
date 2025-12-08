@@ -8,6 +8,7 @@ export interface Licitacao {
   id: string;
   title: string;
   status: LicStatus;
+  portal?: string;
   editalUrl?: string;
   sessionDate?: string;
   submissionDeadline?: string;
@@ -19,6 +20,7 @@ export interface Licitacao {
 export interface CreateLicitacaoDto {
   title: string;
   status: LicStatus;
+  portal?: string;
   editalUrl?: string;
   sessionDate?: string;          // ISO
   submissionDeadline?: string;   // ISO
@@ -27,6 +29,7 @@ export interface CreateLicitacaoDto {
 export interface UpdateLicitacaoDto {
   title?: string;
   status?: LicStatus;
+  portal?: string;
   editalUrl?: string;
   sessionDate?: string;
   submissionDeadline?: string;
