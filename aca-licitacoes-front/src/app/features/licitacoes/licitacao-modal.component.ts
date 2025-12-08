@@ -1,4 +1,4 @@
-import { Component, effect, inject, input, Output, EventEmitter, signal } from '@angular/core';
+import { Component, effect, inject, input, Output, EventEmitter, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LicitacoesService, Licitacao, LicitacaoDocument, CreateLicDocDto, UpdateLicDocDto } from './licitacoes.service';
@@ -19,6 +19,7 @@ export class LicitacaoModalComponent {
   // Inputs
   licId = input<string>('');
   open = input<boolean>(false);
+  initialTab = input<Tab>('geral');
 
   // Outputs
   @Output() closed = new EventEmitter<void>();
@@ -35,12 +36,9 @@ export class LicitacaoModalComponent {
   editingDoc = signal<LicitacaoDocument | null>(null);
   docForm = signal<CreateLicDocDto>({
     name: '',
-    docType: '',
     required: true,
     submitted: false,
     signed: false,
-    issueDate: '',
-    expiresAt: '',
     notes: ''
   });
   docLoading = signal(false);
@@ -51,6 +49,11 @@ export class LicitacaoModalComponent {
   uploadProgress = signal(0);
   uploading = signal(false);
   
+  // Edital upload
+  selectedEditalFiles = signal<File[]>([]);
+  uploadingEdital = signal(false);
+  editalError = signal('');
+  
   // AI Analysis
   analyzingWithAI = signal(false);
 
@@ -59,6 +62,13 @@ export class LicitacaoModalComponent {
     effect(() => {
       if (this.open() && this.licId()) {
         this.load(this.licId()!);
+      }
+    });
+    
+    // Observar mudanças no initialTab para definir a aba
+    effect(() => {
+      if (this.open() && this.initialTab()) {
+        this.tab.set(this.initialTab());
       }
     });
   }
@@ -85,6 +95,11 @@ export class LicitacaoModalComponent {
       error: () => this.docs.set([]), // documentos são complementares – não bloqueia
     });
   }
+
+  // Filtrar documentos do tipo 'edital'
+  editais = computed(() => {
+    return this.docs().filter(doc => doc.docType === 'edital' || doc.name.toLowerCase().includes('edital'));
+  });
 
   statusLabel(s?: Licitacao['status']) {
     switch (s) {
@@ -129,24 +144,18 @@ export class LicitacaoModalComponent {
       this.editingDoc.set(doc);
       this.docForm.set({
         name: doc.name,
-        docType: doc.docType || '',
         required: doc.required,
         submitted: doc.submitted,
         signed: doc.signed,
-        issueDate: doc.issueDate ? new Date(doc.issueDate).toISOString().slice(0, 16) : '',
-        expiresAt: doc.expiresAt ? new Date(doc.expiresAt).toISOString().slice(0, 16) : '',
         notes: doc.notes || ''
       });
     } else {
       this.editingDoc.set(null);
       this.docForm.set({
         name: '',
-        docType: '',
         required: true,
         submitted: false,
         signed: false,
-        issueDate: '',
-        expiresAt: '',
         notes: ''
       });
     }
@@ -170,12 +179,6 @@ export class LicitacaoModalComponent {
     this.docError.set('');
 
     const data = { ...this.docForm() };
-    if (data.issueDate) {
-      data.issueDate = new Date(data.issueDate).toISOString();
-    }
-    if (data.expiresAt) {
-      data.expiresAt = new Date(data.expiresAt).toISOString();
-    }
 
     console.log('Salvando documento:', data);
     console.log('Licitação ID:', this.licId());
@@ -312,6 +315,201 @@ export class LicitacaoModalComponent {
       },
       error: (err) => {
         this.docError.set(err?.error?.message || 'Erro ao baixar arquivo');
+      }
+    });
+  }
+
+  // Edital upload methods
+  onEditalFilesSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const files = Array.from(input.files);
+      
+      // Validar arquivos
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ];
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      
+      const validFiles: File[] = [];
+      const errors: string[] = [];
+      
+      files.forEach(file => {
+        if (!allowedTypes.includes(file.type)) {
+          errors.push(`${file.name}: Tipo de arquivo não permitido. Use PDF, DOC ou DOCX.`);
+        } else if (file.size > maxSize) {
+          errors.push(`${file.name}: Arquivo muito grande. Máximo 10MB.`);
+        } else {
+          validFiles.push(file);
+        }
+      });
+      
+      if (errors.length > 0) {
+        this.editalError.set(errors.join('\n'));
+        Swal.fire({
+          icon: 'warning',
+          title: 'Arquivos inválidos',
+          text: errors.join('\n'),
+          confirmButtonText: 'OK'
+        });
+      }
+      
+      if (validFiles.length > 0) {
+        this.selectedEditalFiles.set([...this.selectedEditalFiles(), ...validFiles]);
+        this.editalError.set('');
+      }
+      
+      // Limpar o input para permitir selecionar o mesmo arquivo novamente
+      input.value = '';
+    }
+  }
+
+  removeEditalFile(index: number) {
+    const files = this.selectedEditalFiles();
+    files.splice(index, 1);
+    this.selectedEditalFiles.set([...files]);
+  }
+
+  uploadEditais() {
+    const files = this.selectedEditalFiles();
+    if (files.length === 0 || !this.licId()) {
+      this.editalError.set('Selecione pelo menos um arquivo');
+      return;
+    }
+
+    this.uploadingEdital.set(true);
+    this.editalError.set('');
+
+    // Upload cada arquivo sequencialmente
+    let uploadCount = 0;
+    const totalFiles = files.length;
+
+    const uploadNext = () => {
+      if (uploadCount >= totalFiles) {
+        this.uploadingEdital.set(false);
+        this.selectedEditalFiles.set([]);
+        this.loadDocuments();
+        Swal.fire({
+          icon: 'success',
+          title: 'Sucesso!',
+          text: `${totalFiles} edital(is) enviado(s) com sucesso!`,
+          confirmButtonText: 'OK'
+        });
+        return;
+      }
+
+      const file = files[uploadCount];
+      const fileName = file.name.replace(/\.[^/.]+$/, ''); // Remove extensão
+      const docName = `Edital - ${fileName}`;
+
+      // Criar documento
+      this.api.addDocument(this.licId()!, {
+        name: docName,
+        docType: 'edital',
+        required: false,
+        submitted: false,
+        signed: false,
+        notes: ''
+      }).subscribe({
+        next: (doc) => {
+          // Fazer upload do arquivo
+          this.api.uploadDocument(this.licId()!, doc.id, file).subscribe({
+            next: () => {
+              uploadCount++;
+              uploadNext();
+            },
+            error: (err) => {
+              this.uploadingEdital.set(false);
+              this.editalError.set(err?.error?.message || 'Erro ao fazer upload do arquivo');
+              Swal.fire({
+                icon: 'error',
+                title: 'Erro',
+                text: `Erro ao fazer upload de ${file.name}: ${err?.error?.message || 'Erro desconhecido'}`,
+                confirmButtonText: 'OK'
+              });
+            }
+          });
+        },
+        error: (err) => {
+          this.uploadingEdital.set(false);
+          this.editalError.set(err?.error?.message || 'Erro ao criar documento');
+          Swal.fire({
+            icon: 'error',
+            title: 'Erro',
+            text: `Erro ao criar documento para ${file.name}: ${err?.error?.message || 'Erro desconhecido'}`,
+            confirmButtonText: 'OK'
+          });
+        }
+      });
+    };
+
+    uploadNext();
+  }
+
+  downloadEdital(doc: LicitacaoDocument) {
+    if (!doc.fileName) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Aviso',
+        text: 'Nenhum arquivo disponível para download',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    this.api.downloadDocument(this.licId()!, doc.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = doc.fileName || 'edital';
+        link.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Erro',
+          text: err?.error?.message || 'Erro ao baixar arquivo',
+          confirmButtonText: 'OK'
+        });
+      }
+    });
+  }
+
+  deleteEdital(doc: LicitacaoDocument) {
+    Swal.fire({
+      title: 'Tem certeza?',
+      text: `Deseja excluir o edital "${doc.name}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#0f3d2e',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sim, excluir',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.api.deleteDocument(this.licId()!, doc.id).subscribe({
+          next: () => {
+            this.loadDocuments();
+            Swal.fire({
+              icon: 'success',
+              title: 'Excluído!',
+              text: 'Edital excluído com sucesso',
+              confirmButtonText: 'OK'
+            });
+          },
+          error: (err) => {
+            Swal.fire({
+              icon: 'error',
+              title: 'Erro',
+              text: err?.error?.message || 'Erro ao excluir edital',
+              confirmButtonText: 'OK'
+            });
+          }
+        });
       }
     });
   }

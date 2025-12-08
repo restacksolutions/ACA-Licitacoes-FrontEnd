@@ -2,8 +2,9 @@ import { Component, inject, signal, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LicitacoesService, Licitacao, LicStatus, CreateLicitacaoDto, UpdateLicitacaoDto } from './licitacoes.service';
-
+import { CompanyService } from '../../core/services/company.service';
 import { LicitacaoModalComponent } from './licitacao-modal.component';
+import Swal from 'sweetalert2';
 
 
 type UiStatus = LicStatus | 'all';
@@ -26,11 +27,16 @@ export class LicitacoesListComponent {
 
   showModal = signal(false);
   selectedId = signal<string>('');
+  initialTab = signal<'geral' | 'documentos'>('geral');
   showCreateModal = signal(false);
   showEditModal = signal(false);
   editingLicitacao = signal<Licitacao | null>(null);
 
   private api = inject(LicitacoesService);
+  private companyService = inject(CompanyService);
+  
+  // Nome da empresa atual
+  companyName = signal<string | null>(null);
 
   // dados e filtros
   items = signal<Licitacao[]>([]);
@@ -61,6 +67,23 @@ export class LicitacoesListComponent {
     effect(() => {
       void this.fetch(this.search(), this.status());
     });
+    
+    // Observar mudanças no companyId e recarregar nome da empresa
+    effect(() => {
+      const companyId = this.companyService.companyId$();
+      this.loadCompanyName(companyId);
+    });
+  }
+  
+  private loadCompanyName(companyId: string) {
+    if (companyId) {
+      this.companyService.getCompanyName(companyId).subscribe({
+        next: (name) => this.companyName.set(name),
+        error: () => this.companyName.set(null)
+      });
+    } else {
+      this.companyName.set(null);
+    }
   }
 
   onSearch(event: Event) {
@@ -182,7 +205,8 @@ export class LicitacoesListComponent {
   }
 
   // Ações do modal
-  openModal(id: string) {
+  openModal(id: string, tab: 'geral' | 'documentos' = 'geral') {
+    this.initialTab.set(tab);
     this.selectedId.set(id);
     this.showModal.set(true);
   }
@@ -253,11 +277,29 @@ export class LicitacoesListComponent {
       : this.api.create(data);
 
     operation.subscribe({
-      next: () => {
+      next: (licitacao) => {
         this.formLoading.set(false);
         this.closeCreateModal();
         this.closeEditModal();
         this.refresh();
+        
+        // Se foi criação (não edição), abrir modal na aba de documentos
+        if (!this.editingLicitacao() && licitacao?.id) {
+          // Feedback visual de sucesso
+          Swal.fire({
+            icon: 'success',
+            title: 'Licitação criada!',
+            text: 'Agora adicione os documentos.',
+            timer: 2000,
+            showConfirmButton: false
+          });
+          
+          // Pequeno delay para garantir que o refresh atualizou a lista
+          setTimeout(() => {
+            this.initialTab.set('documentos');
+            this.openModal(licitacao.id, 'documentos');
+          }, 100);
+        }
       },
       error: (err) => {
         this.formLoading.set(false);
